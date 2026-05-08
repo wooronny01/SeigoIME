@@ -14,4 +14,13 @@ android {
         versionCode 1
         versionName "1.0"
     }
+
+    // [추가된 부분] 자바와 코틀린의 버전을 17로 완벽하게 통일합니다
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
 }
