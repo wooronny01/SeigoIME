@@ -6,7 +6,11 @@ class JapaneseConverter {
     private val dictionary = mapOf(
         "ㅇㅏ" to "あ", "ㅇㅣ" to "い", "ㅇㅜ" to "う", "ㅇㅔ" to "え", "ㅇㅗ" to "お", 
         "ㅇㅑ" to "や", "ㅇㅠ" to "ゆ", "ㅇㅛ" to "よ", 
-        "ㅇㅗㅏ" to "わ", "ㅇㅜㅓ" to "を", 
+        "ㅇㅘ" to "わ", "ㅇㅝ" to "を", 
+        
+        // 🌟 핵심 추가: 3단계 결합을 위한 '마법의 징검다리'
+        "おㅏ" to "わ", "うㅓ" to "を", 
+        
         "ㄴ" to "ん", "ㅅ" to "っ", 
         "ㅋㅏ" to "か", "ㅋㅣ" to "き", "ㅋㅜ" to "く", "ㅋㅔ" to "け", "ㅋㅗ" to "こ", 
         "ㅅㅏ" to "さ", "ㅅㅣ" to "し", "ㅅㅜ" to "す", "ㅅㅡ" to "す", "ㅅㅔ" to "せ", "ㅅㅗ" to "そ", 
@@ -40,9 +44,14 @@ class JapaneseConverter {
         
         if (dictionary.containsKey(combined)) {
             val res = dictionary[combined]!!
-            // ㅇㅗㅏ 같은 여러 글자가 합쳐질 때도 완벽히 앞을 지우도록 길이만큼 백스페이스
             val deleteCount = lastInput.length
-            lastInput = "" 
+            
+            // 🌟 핵심 로직: わ, を 조합을 위해 'お', 'う'는 버퍼에 살려둡니다.
+            if (res == "お" || res == "う") {
+                lastInput = res
+            } else {
+                lastInput = "" 
+            }
             return Pair(deleteCount, res)
         } 
         else if (sokuonTriggers.containsKey(combined)) {
@@ -55,7 +64,8 @@ class JapaneseConverter {
             return Pair(0, dictionary[input]!!)
         } 
         else {
-            lastInput = combined 
+            // 오타를 쳐도 다음 글자 입력이 꼬이지 않도록 버퍼를 새 글자로 갱신합니다.
+            lastInput = input 
             return Pair(0, input)    
         }
     }
