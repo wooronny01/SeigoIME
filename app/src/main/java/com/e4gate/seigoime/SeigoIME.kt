@@ -1,6 +1,7 @@
 package com.e4gate.seigoime
 
 import android.inputmethodservice.InputMethodService
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -12,7 +13,6 @@ class SeigoIME : InputMethodService() {
     private var isShifted = false
     private var isHangulMode = true
     
-    // 화면 뷰를 명시적으로 담아둘 변수 추가
     private var keyboardView: View? = null
 
     override fun onCreateInputView(): View {
@@ -22,6 +22,86 @@ class SeigoIME : InputMethodService() {
         return view
     }
 
+    // -------------------------------------------------------------
+    // 🌟 1. 하드웨어 키보드 입력 가로채기 (물리 키보드 연동 로직)
+    // -------------------------------------------------------------
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        // 영문 키코드를 한글 자모로 변환
+        val mappedChar = getKoreanCharFromKeyCode(keyCode)
+        
+        when (keyCode) {
+            KeyEvent.KEYCODE_DEL -> {
+                currentInputConnection?.deleteSurroundingText(1, 0)
+                converter.clearBuffer()
+                return true // 입력 소비(완료) 처리
+            }
+            KeyEvent.KEYCODE_SPACE -> {
+                handleSpecialInput(" ")
+                return true
+            }
+            KeyEvent.KEYCODE_ENTER -> {
+                handleSpecialInput("\n")
+                return true
+            }
+        }
+
+        // 변환된 한글이 있다면 우리 엔진으로 전송
+        if (mappedChar != null) {
+            handleNormalInput(mappedChar)
+            return true
+        }
+
+        // 우리가 처리하지 않는 키(숫자, 기호, 방향키 등)는 안드로이드 기본 동작에 맡김
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        // onKeyDown에서 우리가 가로챈 키가 onKeyUp에서 다시 시스템으로 넘어가지 않게 방어
+        if (getKoreanCharFromKeyCode(keyCode) != null || 
+            keyCode == KeyEvent.KEYCODE_DEL || 
+            keyCode == KeyEvent.KEYCODE_SPACE || 
+            keyCode == KeyEvent.KEYCODE_ENTER) {
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
+    }
+
+    // 영문 QWERTY 레이아웃을 한글 두벌식/단모음으로 매핑
+    private fun getKoreanCharFromKeyCode(keyCode: Int): String? {
+        return when (keyCode) {
+            KeyEvent.KEYCODE_Q -> "ㅂ"
+            KeyEvent.KEYCODE_W -> "ㅈ"
+            KeyEvent.KEYCODE_E -> "ㄷ"
+            KeyEvent.KEYCODE_R -> "ㄱ"
+            KeyEvent.KEYCODE_T -> "ㅅ"
+            KeyEvent.KEYCODE_Y -> "ㅛ"
+            KeyEvent.KEYCODE_U -> "ㅕ"
+            KeyEvent.KEYCODE_I -> "ㅑ"
+            KeyEvent.KEYCODE_O -> "ㅐ"
+            KeyEvent.KEYCODE_P -> "ㅔ"
+            KeyEvent.KEYCODE_A -> "ㅁ"
+            KeyEvent.KEYCODE_S -> "ㄴ"
+            KeyEvent.KEYCODE_D -> "ㅇ"
+            KeyEvent.KEYCODE_F -> "ㄹ"
+            KeyEvent.KEYCODE_G -> "ㅎ"
+            KeyEvent.KEYCODE_H -> "ㅗ"
+            KeyEvent.KEYCODE_J -> "ㅓ"
+            KeyEvent.KEYCODE_K -> "ㅏ"
+            KeyEvent.KEYCODE_L -> "ㅣ"
+            KeyEvent.KEYCODE_Z -> "ㅋ"
+            KeyEvent.KEYCODE_X -> "ㅌ"
+            KeyEvent.KEYCODE_C -> "ㅊ"
+            KeyEvent.KEYCODE_V -> "ㅍ"
+            KeyEvent.KEYCODE_B -> "ㅠ"
+            KeyEvent.KEYCODE_N -> "ㅜ"
+            KeyEvent.KEYCODE_M -> "ㅡ"
+            else -> null
+        }
+    }
+
+    // -------------------------------------------------------------
+    // 2. 화면(소프트) 키보드 터치 로직 (기존과 동일)
+    // -------------------------------------------------------------
     private fun setButtonListeners(viewGroup: ViewGroup) {
         for (i in 0 until viewGroup.childCount) {
             val child = viewGroup.getChildAt(i)
