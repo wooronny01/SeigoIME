@@ -11,9 +11,13 @@ class SeigoIME : InputMethodService() {
     
     private var isShifted = false
     private var isHangulMode = true
+    
+    // 화면 뷰를 명시적으로 담아둘 변수 추가
+    private var keyboardView: View? = null
 
     override fun onCreateInputView(): View {
         val view = layoutInflater.inflate(R.layout.keyboard_view, null)
+        keyboardView = view
         setButtonListeners(view as ViewGroup)
         return view
     }
@@ -51,42 +55,42 @@ class SeigoIME : InputMethodService() {
     }
 
     private fun updateShiftUI() {
-        val shiftButton = currentInputView?.findViewById<Button>(R.id.btn_shift)
-        val ㅂButton = currentInputView?.findViewById<Button>(R.id.btn_key_ㅂ)
-        val ㅈButton = currentInputView?.findViewById<Button>(R.id.btn_key_ㅈ)
-        val ㄷButton = currentInputView?.findViewById<Button>(R.id.btn_key_ㄷ)
-        val ㄱButton = currentInputView?.findViewById<Button>(R.id.btn_key_ㄱ)
-        val ㅅButton = currentInputView?.findViewById<Button>(R.id.btn_key_ㅅ)
+        val shiftButton = keyboardView?.findViewById<Button>(R.id.btn_shift)
+        val qButton = keyboardView?.findViewById<Button>(R.id.btn_key_q)
+        val wButton = keyboardView?.findViewById<Button>(R.id.btn_key_w)
+        val eButton = keyboardView?.findViewById<Button>(R.id.btn_key_e)
+        val rButton = keyboardView?.findViewById<Button>(R.id.btn_key_r)
+        val tButton = keyboardView?.findViewById<Button>(R.id.btn_key_t)
 
         if (isShifted) {
             shiftButton?.text = "⇪" 
-            ㅂButton?.text = "ㅃ"
-            ㅈButton?.text = "ㅉ"
-            ㄷButton?.text = "ㄸ"
-            ㄱButton?.text = "ㄲ"
-            ㅅButton?.text = "ㅆ"
+            qButton?.text = "ㅃ"
+            wButton?.text = "ㅉ"
+            eButton?.text = "ㄸ"
+            rButton?.text = "ㄲ"
+            tButton?.text = "ㅆ"
         } else {
             shiftButton?.text = "⇧"
-            ㅂButton?.text = "ㅂ"
-            ㅈButton?.text = "ㅈ"
-            ㄷButton?.text = "ㄷ"
-            ㄱButton?.text = "ㄱ"
-            ㅅButton?.text = "ㅅ"
+            qButton?.text = "ㅂ"
+            wButton?.text = "ㅈ"
+            eButton?.text = "ㄷ"
+            rButton?.text = "ㄱ"
+            tButton?.text = "ㅅ"
         }
     }
 
     private fun switchLayout(layoutId: Int) {
-        currentInputView?.findViewById<LinearLayout>(R.id.layout_hangul)?.visibility = if (layoutId == 1) View.VISIBLE else View.GONE
-        currentInputView?.findViewById<LinearLayout>(R.id.layout_symbol_1)?.visibility = if (layoutId == 2) View.VISIBLE else View.GONE
-        currentInputView?.findViewById<LinearLayout>(R.id.layout_symbol_2)?.visibility = if (layoutId == 3) View.VISIBLE else View.GONE
+        keyboardView?.findViewById<LinearLayout>(R.id.layout_hangul)?.visibility = if (layoutId == 1) View.VISIBLE else View.GONE
+        keyboardView?.findViewById<LinearLayout>(R.id.layout_symbol_1)?.visibility = if (layoutId == 2) View.VISIBLE else View.GONE
+        keyboardView?.findViewById<LinearLayout>(R.id.layout_symbol_2)?.visibility = if (layoutId == 3) View.VISIBLE else View.GONE
         
-        currentInputView?.findViewById<Button>(R.id.btn_symbol)?.visibility = if (layoutId == 1) View.VISIBLE else View.GONE
-        currentInputView?.findViewById<Button>(R.id.btn_abc)?.visibility = if (layoutId == 2 || layoutId == 3) View.VISIBLE else View.GONE
+        keyboardView?.findViewById<Button>(R.id.btn_symbol)?.visibility = if (layoutId == 1) View.VISIBLE else View.GONE
+        keyboardView?.findViewById<Button>(R.id.btn_abc)?.visibility = if (layoutId == 2 || layoutId == 3) View.VISIBLE else View.GONE
         
-        val abcButton = currentInputView?.findViewById<Button>(R.id.btn_abc)
+        val abcButton = keyboardView?.findViewById<Button>(R.id.btn_abc)
         if (layoutId == 2 || layoutId == 3) abcButton?.text = "ABC"
 
-        val symbolButton = currentInputView?.findViewById<Button>(R.id.btn_symbol)
+        val symbolButton = keyboardView?.findViewById<Button>(R.id.btn_symbol)
         if (layoutId == 1) symbolButton?.text = "!#1"
 
         isHangulMode = (layoutId == 1)
