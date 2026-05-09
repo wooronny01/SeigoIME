@@ -28,6 +28,7 @@ class SeigoIME : InputMethodService() {
                             converter.clearBuffer() 
                         }
                         "띄어쓰기" -> { 
+                            // 띄어쓰기 누르기 직전에 혼자 남은 'ㅅ'이나 'ㄴ'이 있다면 っ/ん으로 깔끔하게 변환
                             converter.flushPending()?.let {
                                 currentInputConnection?.deleteSurroundingText(it.first, 0)
                                 currentInputConnection?.commitText(it.second, 1)
