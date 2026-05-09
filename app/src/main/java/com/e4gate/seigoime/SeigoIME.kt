@@ -36,16 +36,13 @@ class SeigoIME : InputMethodService() {
                             converter.clearBuffer() 
                         }
                         else -> {
-                            val result = converter.processInput(text)
+                            val (deleteCount, textToCommit) = converter.processInput(text)
                             
-                            // [안드로이드 변환의 핵심 로직]
-                            if (converter.isComposing()) {
-                                // 조립 중이면 밑줄 친 상태로 임시 대기 (setComposingText)
-                                currentInputConnection?.setComposingText(result, 1)
-                            } else {
-                                // 완성이면 글자를 완전히 확정 (commitText)
-                                currentInputConnection?.commitText(result, 1)
+                            if (deleteCount > 0) {
+                                currentInputConnection?.deleteSurroundingText(deleteCount, 0)
                             }
+                            
+                            currentInputConnection?.commitText(textToCommit, 1)
                         }
                     }
                 }

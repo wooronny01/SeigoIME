@@ -1,40 +1,28 @@
 package com.e4gate.seigoime
 
 class JapaneseConverter {
-    var currentBuffer = ""
+    private var lastInput = ""
 
-    fun processInput(input: String): String {
-        currentBuffer += input
-        return when (currentBuffer) {
-            // 1. 아직 조립 중인 상태 (뒤에 모음이 더 필요한 경우)
-            "ㄱ" -> "ㄱ"
-            "ㅅ" -> "ㅅ"
-            
-            // 2. 변환이 완벽하게 끝난 상태!
+    fun processInput(input: String): Pair<Int, String> {
+        val combined = lastInput + input
+        
+        return when (combined) {
             "ㄱㅏ" -> {
-                currentBuffer = ""
-                "か"
+                lastInput = "" 
+                Pair(1, "か")  
             }
             "ㅅㅏ" -> {
-                currentBuffer = ""
-                "さ"
+                lastInput = ""
+                Pair(1, "さ")
             }
-            
-            // 3. 변환 규칙에 없는 글자는 그냥 그대로 확정하고 버퍼 비우기
             else -> {
-                val out = currentBuffer
-                currentBuffer = ""
-                out
+                lastInput = input 
+                Pair(0, input)    
             }
         }
     }
 
-    // 이 함수가 핵심! 버퍼에 글자가 남아있으면 "조립 중"이라고 판단합니다.
-    fun isComposing(): Boolean {
-        return currentBuffer.isNotEmpty()
-    }
-
     fun clearBuffer() {
-        currentBuffer = ""
+        lastInput = ""
     }
 }
