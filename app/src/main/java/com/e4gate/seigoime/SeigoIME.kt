@@ -28,20 +28,26 @@ class SeigoIME : InputMethodService() {
                             converter.clearBuffer() 
                         }
                         "띄어쓰기" -> { 
+                            converter.flushPending()?.let {
+                                currentInputConnection?.deleteSurroundingText(it.first, 0)
+                                currentInputConnection?.commitText(it.second, 1)
+                            }
                             currentInputConnection?.commitText(" ", 1)
                             converter.clearBuffer() 
                         }
                         "엔터" -> { 
+                            converter.flushPending()?.let {
+                                currentInputConnection?.deleteSurroundingText(it.first, 0)
+                                currentInputConnection?.commitText(it.second, 1)
+                            }
                             currentInputConnection?.commitText("\n", 1)
                             converter.clearBuffer() 
                         }
                         else -> {
                             val (deleteCount, textToCommit) = converter.processInput(text)
-                            
                             if (deleteCount > 0) {
                                 currentInputConnection?.deleteSurroundingText(deleteCount, 0)
                             }
-                            
                             currentInputConnection?.commitText(textToCommit, 1)
                         }
                     }
