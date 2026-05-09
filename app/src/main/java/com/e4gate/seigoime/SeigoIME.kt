@@ -95,7 +95,6 @@ class SeigoIME : InputMethodService() {
 
     private fun handleNormalInput(text: String) {
         if (isHangulMode && isShifted) {
-            // 엔진에는 필요 없지만, 화면에서 Shift를 끄고 UI를 원상 복구하기 위해 처리
             isShifted = false
             updateShiftUI()
         }
