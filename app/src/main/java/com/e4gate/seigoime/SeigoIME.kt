@@ -23,12 +23,11 @@ class SeigoIME : InputMethodService() {
                 child.setOnClickListener {
                     val text = child.text.toString()
                     when (text) {
-                        "지우기" -> { 
+                        "⌫" -> { 
                             currentInputConnection?.deleteSurroundingText(1, 0)
                             converter.clearBuffer() 
                         }
-                        "띄어쓰기" -> { 
-                            // 띄어쓰기 누르기 직전에 혼자 남은 'ㅅ'이나 'ㄴ'이 있다면 っ/ん으로 깔끔하게 변환
+                        "간격" -> { 
                             converter.flushPending()?.let {
                                 currentInputConnection?.deleteSurroundingText(it.first, 0)
                                 currentInputConnection?.commitText(it.second, 1)
@@ -36,13 +35,18 @@ class SeigoIME : InputMethodService() {
                             currentInputConnection?.commitText(" ", 1)
                             converter.clearBuffer() 
                         }
-                        "엔터" -> { 
+                        "⏎" -> { 
                             converter.flushPending()?.let {
                                 currentInputConnection?.deleteSurroundingText(it.first, 0)
                                 currentInputConnection?.commitText(it.second, 1)
                             }
-                            currentInputConnection?.commitText("\n", 1)
+                            currentInputConnection?.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_ENTER))
                             converter.clearBuffer() 
+                        }
+                        "⇧", "!#1", "," , "." -> {
+                            // 기능 키 및 기본 기호 처리 (추후 확장 가능)
+                            currentInputConnection?.commitText(text, 1)
+                            converter.clearBuffer()
                         }
                         else -> {
                             val (deleteCount, textToCommit) = converter.processInput(text)
