@@ -4,6 +4,7 @@ import android.inputmethodservice.InputMethodService
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.LinearLayout
 
@@ -22,18 +23,14 @@ class SeigoIME : InputMethodService() {
         return view
     }
 
-    // -------------------------------------------------------------
-    // 🌟 1. 하드웨어 키보드 입력 가로채기 (물리 키보드 연동 로직)
-    // -------------------------------------------------------------
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        // 영문 키코드를 한글 자모로 변환
         val mappedChar = getKoreanCharFromKeyCode(keyCode)
         
         when (keyCode) {
             KeyEvent.KEYCODE_DEL -> {
                 currentInputConnection?.deleteSurroundingText(1, 0)
                 converter.clearBuffer()
-                return true // 입력 소비(완료) 처리
+                return true
             }
             KeyEvent.KEYCODE_SPACE -> {
                 handleSpecialInput(" ")
@@ -45,18 +42,15 @@ class SeigoIME : InputMethodService() {
             }
         }
 
-        // 변환된 한글이 있다면 우리 엔진으로 전송
         if (mappedChar != null) {
             handleNormalInput(mappedChar)
             return true
         }
 
-        // 우리가 처리하지 않는 키(숫자, 기호, 방향키 등)는 안드로이드 기본 동작에 맡김
         return super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        // onKeyDown에서 우리가 가로챈 키가 onKeyUp에서 다시 시스템으로 넘어가지 않게 방어
         if (getKoreanCharFromKeyCode(keyCode) != null || 
             keyCode == KeyEvent.KEYCODE_DEL || 
             keyCode == KeyEvent.KEYCODE_SPACE || 
@@ -66,7 +60,6 @@ class SeigoIME : InputMethodService() {
         return super.onKeyUp(keyCode, event)
     }
 
-    // 영문 QWERTY 레이아웃을 한글 두벌식/단모음으로 매핑
     private fun getKoreanCharFromKeyCode(keyCode: Int): String? {
         return when (keyCode) {
             KeyEvent.KEYCODE_Q -> "ㅂ"
@@ -99,9 +92,6 @@ class SeigoIME : InputMethodService() {
         }
     }
 
-    // -------------------------------------------------------------
-    // 2. 화면(소프트) 키보드 터치 로직 (기존과 동일)
-    // -------------------------------------------------------------
     private fun setButtonListeners(viewGroup: ViewGroup) {
         for (i in 0 until viewGroup.childCount) {
             val child = viewGroup.getChildAt(i)
@@ -121,6 +111,13 @@ class SeigoIME : InputMethodService() {
                         "!#1", "?123" -> { switchLayout(2) } 
                         "ABC" -> { switchLayout(1) } 
                         "=\\<" -> { switchLayout(3) } 
+                        
+                        // 🌟 [핵심 기능] 지구본 버튼: 입력기 선택 메뉴 팝업 호출
+                        "🌐" -> {
+                            val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                            imm.showInputMethodPicker()
+                        }
+                        
                         else -> { handleNormalInput(text) }
                     }
                 }
@@ -165,6 +162,7 @@ class SeigoIME : InputMethodService() {
         keyboardView?.findViewById<LinearLayout>(R.id.layout_symbol_2)?.visibility = if (layoutId == 3) View.VISIBLE else View.GONE
         
         keyboardView?.findViewById<Button>(R.id.btn_symbol)?.visibility = if (layoutId == 1) View.VISIBLE else View.GONE
+        keyboardView?.findViewById<Button>(R.id.btn_globe)?.visibility = if (layoutId == 1) View.VISIBLE else View.GONE
         keyboardView?.findViewById<Button>(R.id.btn_abc)?.visibility = if (layoutId == 2 || layoutId == 3) View.VISIBLE else View.GONE
         
         val abcButton = keyboardView?.findViewById<Button>(R.id.btn_abc)
