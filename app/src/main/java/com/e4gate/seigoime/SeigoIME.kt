@@ -19,13 +19,13 @@ class SeigoIME : InputMethodService() {
     
     private var isShifted = false
     private var isHangulMode = true
-    private var isDanmoeum = false // 🌟 단모음 모드 플래그
+    private var isDanmoeum = false 
     
     private var currentHiraganaBuffer = "" 
     private var candidatesList = mutableListOf<String>()
     private var currentCandidateIndex = -1
     private var lastCommittedLength = 0 
-    private var lastVowel = "" // 단모음 조합을 위한 마지막 모음 저장
+    private var lastVowelKey = "" // 🌟 단모음 연속 입력을 추적하는 변수
 
     override fun onCreateInputView(): View {
         val view = layoutInflater.inflate(R.layout.keyboard_view, null)
@@ -90,7 +90,7 @@ class SeigoIME : InputMethodService() {
         candidatesList.clear()
         currentCandidateIndex = -1
         lastCommittedLength = 0
-        lastVowel = ""
+        lastVowelKey = ""
         converter.clearBuffer()
         updateCandidates("")
     }
@@ -113,6 +113,11 @@ class SeigoIME : InputMethodService() {
         return super.onKeyDown(keyCode, event)
     }
 
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (getKoreanCharFromKeyCode(keyCode) != null || keyCode == KeyEvent.KEYCODE_DEL || keyCode == KeyEvent.KEYCODE_SPACE || keyCode == KeyEvent.KEYCODE_ENTER) return true
+        return super.onKeyUp(keyCode, event)
+    }
+
     private fun handleBackspace() {
         currentInputConnection?.deleteSurroundingText(1, 0)
         if (currentHiraganaBuffer.isNotEmpty()) {
@@ -121,7 +126,7 @@ class SeigoIME : InputMethodService() {
             currentCandidateIndex = -1
             updateCandidates(currentHiraganaBuffer)
         }
-        lastVowel = ""
+        lastVowelKey = ""
         converter.clearBuffer()
     }
 
@@ -160,27 +165,42 @@ class SeigoIME : InputMethodService() {
         }
     }
 
+    // 🌟 [핵심] 단모음 스마트 요음(야/유/요) 치환 로직
     private fun handleNormalInput(text: String) {
-        var inputChar = text
-        
-        // 🌟 단모음 조합 로직 (ㅏ+ㅏ=ㅑ 등)
-        if (isDanmoeum && "ㅏㅓㅗㅜ".contains(inputChar) && inputChar == lastVowel) {
-            val combined = when(inputChar) {
-                "ㅏ" -> "ㅑ"; "ㅓ" -> "ㅕ"; "ㅗ" -> "ㅛ"; "ㅜ" -> "ㅠ"; else -> inputChar
-            }
-            currentInputConnection?.deleteSurroundingText(1, 0)
-            currentHiraganaBuffer = currentHiraganaBuffer.dropLast(1)
-            inputChar = combined
-            lastVowel = ""
-        } else if (isDanmoeum && "ㅏㅓㅗㅜㅣ".contains(inputChar)) {
-            lastVowel = inputChar
-        } else {
-            lastVowel = ""
-        }
-
         if (isHangulMode && isShifted) { isShifted = false; updateShiftUI() }
+
+        // 1. 단모음 연속 입력 처리
+        if (isDanmoeum && (text == "ㅏ" || text == "ㅗ" || text == "ㅜ")) {
+            if (text == lastVowelKey && currentHiraganaBuffer.isNotEmpty()) {
+                val lastChar = currentHiraganaBuffer.takeLast(1)
+                
+                val mapA = mapOf("あ" to "や", "か" to "きゃ", "が" to "ぎゃ", "さ" to "しゃ", "ざ" to "じゃ", "な" to "にゃ", "は" to "ひゃ", "ば" to "びゃ", "ぱ" to "ぴゃ", "ま" to "みゃ", "ら" to "りゃ")
+                val mapO = mapOf("お" to "よ", "こ" to "きょ", "ご" to "ぎょ", "そ" to "しょ", "ぞ" to "じょ", "の" to "にょ", "ほ" to "ひょ", "ぼ" to "びょ", "ぽ" to "ぴょ", "も" to "みょ", "ろ" to "りょ")
+                val mapU = mapOf("う" to "ゆ", "く" to "きゅ", "ぐ" to "ぎゅ", "す" to "しゅ", "ず" to "じゅ", "ぬ" to "にゅ", "ふ" to "ひゅ", "ぶ" to "びゅ", "ぷ" to "ぴゅ", "む" to "みゅ", "る" to "りゅ")
+                
+                var replacement: String? = null
+                if (text == "ㅏ") replacement = mapA[lastChar]
+                else if (text == "ㅗ") replacement = mapO[lastChar]
+                else if (text == "ㅜ") replacement = mapU[lastChar]
+
+                if (replacement != null) {
+                    currentInputConnection?.deleteSurroundingText(1, 0)
+                    currentHiraganaBuffer = currentHiraganaBuffer.dropLast(1)
+                    currentInputConnection?.commitText(replacement, 1)
+                    currentHiraganaBuffer += replacement
+                    lastCommittedLength = currentHiraganaBuffer.length
+                    currentCandidateIndex = -1
+                    updateCandidates(currentHiraganaBuffer)
+                    lastVowelKey = "" // 연속 입력 소비
+                    return
+                }
+            }
+        }
         
-        val (deleteCount, textToCommit) = converter.processInput(inputChar)
+        lastVowelKey = if (isDanmoeum && "ㅏㅓㅗㅜㅣ".contains(text)) text else ""
+
+        // 2. 일반 입력 처리
+        val (deleteCount, textToCommit) = converter.processInput(text)
         if (deleteCount > 0) {
             currentInputConnection?.deleteSurroundingText(deleteCount, 0)
             if (currentHiraganaBuffer.length >= deleteCount) {
@@ -191,7 +211,7 @@ class SeigoIME : InputMethodService() {
         
         currentHiraganaBuffer += textToCommit
         lastCommittedLength = currentHiraganaBuffer.length
-        currentCandidateIndex = -1
+        currentCandidateIndex = -1 
         updateCandidates(currentHiraganaBuffer)
     }
 
@@ -219,7 +239,7 @@ class SeigoIME : InputMethodService() {
                     val text = child.text.toString()
                     when (text) {
                         "⌫" -> { handleBackspace() }
-                        "セイ고입력" -> { handleSpaceAction() }
+                        "セイゴ입력" -> { handleSpaceAction() }
                         "⏎" -> { handleEnterAction() }
                         "⇧", "⇪" -> { handleShift() }
                         "두벌", "단모" -> { toggleLayoutMode() }
@@ -238,27 +258,8 @@ class SeigoIME : InputMethodService() {
         isDanmoeum = !isDanmoeum
         val btn = keyboardView?.findViewById<Button>(R.id.btn_layout_toggle)
         btn?.text = if (isDanmoeum) "단모" else "두벌"
-        switchLayout(1) // 레이아웃 갱신
+        switchLayout(1) 
         clearCandidateBuffer()
-    }
-
-    private fun switchLayout(layoutId: Int) {
-        val v = keyboardView ?: return
-        val hangulDubeol = v.findViewById<LinearLayout>(R.id.layout_hangul_dubeol)
-        val hangulDanmo = v.findViewById<LinearLayout>(R.id.layout_hangul_danmoeum)
-        val symbol1 = v.findViewById<LinearLayout>(R.id.layout_symbol_1)
-        
-        hangulDubeol.visibility = if (layoutId == 1 && !isDanmoeum) View.VISIBLE else View.GONE
-        hangulDanmo.visibility = if (layoutId == 1 && isDanmoeum) View.VISIBLE else View.GONE
-        symbol1.visibility = if (layoutId == 2) View.VISIBLE else View.GONE
-        
-        v.findViewById<Button>(R.id.btn_symbol).visibility = if (layoutId == 1) View.VISIBLE else View.GONE
-        v.findViewById<Button>(R.id.btn_globe).visibility = if (layoutId == 1) View.VISIBLE else View.GONE
-        v.findViewById<Button>(R.id.btn_layout_toggle).visibility = if (layoutId == 1) View.VISIBLE else View.GONE
-        v.findViewById<Button>(R.id.btn_abc).visibility = if (layoutId != 1) View.VISIBLE else View.GONE
-        
-        isHangulMode = (layoutId == 1)
-        converter.clearBuffer()
     }
 
     private fun handleShift() { isShifted = !isShifted; updateShiftUI(); converter.clearBuffer() }
@@ -266,8 +267,42 @@ class SeigoIME : InputMethodService() {
         val v = keyboardView ?: return
         val s = v.findViewById<Button>(R.id.btn_shift)
         val sd = v.findViewById<Button>(R.id.btn_shift_dan)
-        // 두벌식/단모음 시프트 모두 업데이트
-        if (isShifted) { s?.text = "⇪"; sd?.text = "⇪" } else { s?.text = "⇧"; sd?.text = "⇧" }
+        val q = v.findViewById<Button>(R.id.btn_key_q); val w = v.findViewById<Button>(R.id.btn_key_w)
+        val e = v.findViewById<Button>(R.id.btn_key_e); val r = v.findViewById<Button>(R.id.btn_key_r); val t = v.findViewById<Button>(R.id.btn_key_t)
+        
+        if (isShifted) { 
+            s?.text = "⇪"; sd?.text = "⇪"
+            q?.text = "ㅃ"; w?.text = "ㅉ"; e?.text = "ㄸ"; r?.text = "ㄲ"; t?.text = "ㅆ"
+        } else { 
+            s?.text = "⇧"; sd?.text = "⇧"
+            q?.text = "ㅂ"; w?.text = "ㅈ"; e?.text = "ㄷ"; r?.text = "ㄱ"; t?.text = "ㅅ" 
+        }
+    }
+
+    private fun switchLayout(layoutId: Int) {
+        val v = keyboardView ?: return
+        val hangulDubeol = v.findViewById<LinearLayout>(R.id.layout_hangul_dubeol)
+        val hangulDanmo = v.findViewById<LinearLayout>(R.id.layout_hangul_danmoeum)
+        val symbol1 = v.findViewById<LinearLayout>(R.id.layout_symbol_1)
+        val symbol2 = v.findViewById<LinearLayout>(R.id.layout_symbol_2)
+        
+        hangulDubeol.visibility = if (layoutId == 1 && !isDanmoeum) View.VISIBLE else View.GONE
+        hangulDanmo.visibility = if (layoutId == 1 && isDanmoeum) View.VISIBLE else View.GONE
+        symbol1.visibility = if (layoutId == 2) View.VISIBLE else View.GONE
+        symbol2.visibility = if (layoutId == 3) View.VISIBLE else View.GONE
+        
+        v.findViewById<Button>(R.id.btn_symbol).visibility = if (layoutId == 1) View.VISIBLE else View.GONE
+        v.findViewById<Button>(R.id.btn_globe).visibility = if (layoutId == 1) View.VISIBLE else View.GONE
+        v.findViewById<Button>(R.id.btn_layout_toggle).visibility = if (layoutId == 1) View.VISIBLE else View.GONE
+        v.findViewById<Button>(R.id.btn_abc).visibility = if (layoutId != 1) View.VISIBLE else View.GONE
+        
+        val abcButton = v.findViewById<Button>(R.id.btn_abc)
+        if (layoutId == 2 || layoutId == 3) abcButton?.text = "한글"
+        val symbolButton = v.findViewById<Button>(R.id.btn_symbol)
+        if (layoutId == 1) symbolButton?.text = "!#1"
+        
+        isHangulMode = (layoutId == 1)
+        converter.clearBuffer()
     }
 
     private fun getKoreanCharFromKeyCode(k: Int): String? {
