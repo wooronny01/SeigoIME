@@ -33,7 +33,13 @@ class SeigoIME : InputMethodService() {
                 return true
             }
             KeyEvent.KEYCODE_SPACE -> {
-                handleSpecialInput(" ")
+                // 🌟 물리 키보드 단축키: Shift + Space 누르면 입력기 선택창 팝업!
+                if (event.isShiftPressed) {
+                    val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.showInputMethodPicker()
+                } else {
+                    handleSpecialInput(" ")
+                }
                 return true
             }
             KeyEvent.KEYCODE_ENTER -> {
@@ -98,6 +104,16 @@ class SeigoIME : InputMethodService() {
             if (child is ViewGroup) {
                 setButtonListeners(child)
             } else if (child is Button) {
+                
+                // 🌟 터치 키보드 스페이스바 롱클릭 지원
+                if (child.id == R.id.btn_space) {
+                    child.setOnLongClickListener {
+                        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                        imm.showInputMethodPicker()
+                        true // 롱클릭 이벤트 소비
+                    }
+                }
+
                 child.setOnClickListener {
                     val text = child.text.toString()
                     when (text) {
@@ -105,20 +121,19 @@ class SeigoIME : InputMethodService() {
                             currentInputConnection?.deleteSurroundingText(1, 0)
                             converter.clearBuffer() 
                         }
-                        "간격" -> { handleSpecialInput(" ") }
+                        
+                        // 🌟 'セイゴ입력' 텍스트에 스페이스 매핑
+                        "セイゴ입력" -> { handleSpecialInput(" ") }
+                        
                         "⏎" -> { handleSpecialInput("\n") }
                         "⇧", "⇪" -> { handleShift() }
                         "!#1", "?123" -> { switchLayout(2) } 
                         "=\\<" -> { switchLayout(3) } 
-                        
-                        // 🌟 "ABC"를 "한글"로 변경
                         "한글" -> { switchLayout(1) } 
-                        
                         "🌐" -> {
                             val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
                             imm.showInputMethodPicker()
                         }
-                        
                         else -> { handleNormalInput(text) }
                     }
                 }
@@ -166,7 +181,6 @@ class SeigoIME : InputMethodService() {
         keyboardView?.findViewById<Button>(R.id.btn_globe)?.visibility = if (layoutId == 1) View.VISIBLE else View.GONE
         keyboardView?.findViewById<Button>(R.id.btn_abc)?.visibility = if (layoutId == 2 || layoutId == 3) View.VISIBLE else View.GONE
         
-        // 🌟 "ABC"를 "한글"로 변경
         val abcButton = keyboardView?.findViewById<Button>(R.id.btn_abc)
         if (layoutId == 2 || layoutId == 3) abcButton?.text = "한글"
 

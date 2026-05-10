@@ -106,7 +106,9 @@
         <Button android:id="@+id/btn_abc" android:text="한글" style="@style/SpecialKeyStyle" android:layout_weight="1" android:visibility="gone"/>
         
         <Button android:text="," style="@style/KeyStyle" android:background="#ECEFF1"/>
-        <Button android:text="간격" android:id="@+id/btn_space" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="3.5" android:layout_margin="1dp" android:background="#FFFFFF" android:textColor="#263238"/>
+        
+        <Button android:id="@+id/btn_space" android:text="セイゴ입력" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="3.5" android:layout_margin="1dp" android:background="#FFFFFF" android:textColor="#263238" android:textSize="16sp"/>
+        
         <Button android:text="." style="@style/KeyStyle" android:background="#ECEFF1"/>
         <Button android:text="⏎" style="@style/SpecialKeyStyle" android:layout_weight="1.3" android:backgroundTint="#42A5F5" android:textColor="#FFFFFF"/>
     </LinearLayout>
