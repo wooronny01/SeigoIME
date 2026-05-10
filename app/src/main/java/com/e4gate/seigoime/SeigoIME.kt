@@ -109,10 +109,11 @@ class SeigoIME : InputMethodService() {
                         "⏎" -> { handleSpecialInput("\n") }
                         "⇧", "⇪" -> { handleShift() }
                         "!#1", "?123" -> { switchLayout(2) } 
-                        "ABC" -> { switchLayout(1) } 
                         "=\\<" -> { switchLayout(3) } 
                         
-                        // 🌟 [핵심 기능] 지구본 버튼: 입력기 선택 메뉴 팝업 호출
+                        // 🌟 "ABC"를 "한글"로 변경
+                        "한글" -> { switchLayout(1) } 
+                        
                         "🌐" -> {
                             val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
                             imm.showInputMethodPicker()
@@ -165,8 +166,9 @@ class SeigoIME : InputMethodService() {
         keyboardView?.findViewById<Button>(R.id.btn_globe)?.visibility = if (layoutId == 1) View.VISIBLE else View.GONE
         keyboardView?.findViewById<Button>(R.id.btn_abc)?.visibility = if (layoutId == 2 || layoutId == 3) View.VISIBLE else View.GONE
         
+        // 🌟 "ABC"를 "한글"로 변경
         val abcButton = keyboardView?.findViewById<Button>(R.id.btn_abc)
-        if (layoutId == 2 || layoutId == 3) abcButton?.text = "ABC"
+        if (layoutId == 2 || layoutId == 3) abcButton?.text = "한글"
 
         val symbolButton = keyboardView?.findViewById<Button>(R.id.btn_symbol)
         if (layoutId == 1) symbolButton?.text = "!#1"

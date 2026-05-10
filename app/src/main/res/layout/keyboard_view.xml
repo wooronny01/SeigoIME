@@ -103,7 +103,8 @@
         <Button android:id="@+id/btn_symbol" android:text="!#1" style="@style/SpecialKeyStyle" android:layout_weight="1"/>
         <Button android:id="@+id/btn_globe" android:text="🌐" style="@style/SpecialKeyStyle" android:layout_weight="1" android:textSize="22sp"/>
         
-        <Button android:id="@+id/btn_abc" android:text="ABC" style="@style/SpecialKeyStyle" android:layout_weight="1" android:visibility="gone"/>
+        <Button android:id="@+id/btn_abc" android:text="한글" style="@style/SpecialKeyStyle" android:layout_weight="1" android:visibility="gone"/>
+        
         <Button android:text="," style="@style/KeyStyle" android:background="#ECEFF1"/>
         <Button android:text="간격" android:id="@+id/btn_space" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="3.5" android:layout_margin="1dp" android:background="#FFFFFF" android:textColor="#263238"/>
         <Button android:text="." style="@style/KeyStyle" android:background="#ECEFF1"/>
