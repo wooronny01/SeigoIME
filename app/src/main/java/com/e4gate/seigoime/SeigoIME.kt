@@ -83,8 +83,7 @@ class SeigoIME : InputMethodService() {
                     }
                 }
             } catch (e: Exception) { 
-                Log.e("SeigoIME", "Google API 통신 또는 JSON 파싱 오류: ${e.message}", e)
-                e.printStackTrace() 
+                Log.e("SeigoIME", "API Error", e)
             }
         }.start()
     }
@@ -265,6 +264,7 @@ class SeigoIME : InputMethodService() {
                         "セイゴ입력" -> { handleSpaceAction() }
                         "⏎" -> { handleEnterAction() }
                         "⇧", "⇪" -> { handleShift() }
+                        "⇥" -> { handleSpecialInput("\t") }
                         "두벌", "단모" -> { toggleLayoutMode() }
                         "あ", "ア" -> { toggleKanaMode() } 
                         "!#1", "?123" -> { switchLayout(2) } 
@@ -309,14 +309,15 @@ class SeigoIME : InputMethodService() {
         val v = keyboardView ?: return
         val s = v.findViewById<Button>(R.id.btn_shift)
         val sd = v.findViewById<Button>(R.id.btn_shift_dan)
+        val sdr = v.findViewById<Button>(R.id.btn_shift_dan_right)
         val q = v.findViewById<Button>(R.id.btn_key_q); val w = v.findViewById<Button>(R.id.btn_key_w)
         val e = v.findViewById<Button>(R.id.btn_key_e); val r = v.findViewById<Button>(R.id.btn_key_r); val t = v.findViewById<Button>(R.id.btn_key_t)
         
         if (isShifted) { 
-            s?.text = "⇪"; sd?.text = "⇪"
+            s?.text = "⇪"; sd?.text = "⇪"; sdr?.text = "⇪"
             q?.text = "ㅃ"; w?.text = "ㅉ"; e?.text = "ㄸ"; r?.text = "ㄲ"; t?.text = "ㅆ"
         } else { 
-            s?.text = "⇧"; sd?.text = "⇧"
+            s?.text = "⇧"; sd?.text = "⇧"; sdr?.text = "⇧"
             q?.text = "ㅂ"; w?.text = "ㅈ"; e?.text = "ㄷ"; r?.text = "ㄱ"; t?.text = "ㅅ" 
         }
     }
