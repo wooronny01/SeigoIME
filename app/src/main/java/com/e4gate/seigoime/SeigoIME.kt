@@ -25,7 +25,7 @@ class SeigoIME : InputMethodService() {
     private var candidatesList = mutableListOf<String>()
     private var currentCandidateIndex = -1
     private var lastCommittedLength = 0 
-    private var lastVowelKey = "" // 🌟 단모음 연속 입력을 추적하는 변수
+    private var lastVowelKey = "" 
 
     override fun onCreateInputView(): View {
         val view = layoutInflater.inflate(R.layout.keyboard_view, null)
@@ -165,18 +165,16 @@ class SeigoIME : InputMethodService() {
         }
     }
 
-    // 🌟 [핵심] 단모음 스마트 요음(야/유/요) 치환 로직
     private fun handleNormalInput(text: String) {
         if (isHangulMode && isShifted) { isShifted = false; updateShiftUI() }
 
-        // 1. 단모음 연속 입력 처리
         if (isDanmoeum && (text == "ㅏ" || text == "ㅗ" || text == "ㅜ")) {
             if (text == lastVowelKey && currentHiraganaBuffer.isNotEmpty()) {
                 val lastChar = currentHiraganaBuffer.takeLast(1)
                 
-                val mapA = mapOf("あ" to "や", "か" to "きゃ", "が" to "ぎゃ", "さ" to "しゃ", "ざ" to "じゃ", "な" to "にゃ", "は" to "ひゃ", "ば" to "びゃ", "ぱ" to "ぴゃ", "ま" to "みゃ", "ら" to "りゃ")
-                val mapO = mapOf("お" to "よ", "こ" to "きょ", "ご" to "ぎょ", "そ" to "しょ", "ぞ" to "じょ", "の" to "にょ", "ほ" to "ひょ", "ぼ" to "びょ", "ぽ" to "ぴょ", "も" to "みょ", "ろ" to "りょ")
-                val mapU = mapOf("う" to "ゆ", "く" to "きゅ", "ぐ" to "ぎゅ", "す" to "しゅ", "ず" to "じゅ", "ぬ" to "にゅ", "ふ" to "ひゅ", "ぶ" to "びゅ", "ぷ" to "ぴゅ", "む" to "みゅ", "る" to "りゅ")
+                val mapA = mapOf("あ" to "や", "か" to "きゃ", "が" to "ぎゃ", "さ" to "しゃ", "ざ" to "じゃ", "た" to "ちゃ", "だ" to "ぢゃ", "な" to "にゃ", "は" to "ひゃ", "ば" to "びゃ", "ぱ" to "ぴゃ", "ま" to "みゃ", "ら" to "りゃ")
+                val mapO = mapOf("お" to "よ", "こ" to "きょ", "ご" to "ぎょ", "そ" to "しょ", "ぞ" to "じょ", "と" to "ちょ", "ど" to "ぢょ", "の" to "にょ", "ほ" to "ひょ", "ぼ" to "びょ", "ぽ" to "ぴょ", "も" to "みょ", "ろ" to "りょ")
+                val mapU = mapOf("う" to "ゆ", "く" to "きゅ", "ぐ" to "ぎゅ", "す" to "しゅ", "ず" to "じゅ", "つ" to "ちゅ", "づ" to "ぢゅ", "ぬ" to "にゅ", "ふ" to "ひゅ", "ぶ" to "びゅ", "ぷ" to "ぴゅ", "む" to "みゅ", "る" to "りゅ")
                 
                 var replacement: String? = null
                 if (text == "ㅏ") replacement = mapA[lastChar]
@@ -191,15 +189,14 @@ class SeigoIME : InputMethodService() {
                     lastCommittedLength = currentHiraganaBuffer.length
                     currentCandidateIndex = -1
                     updateCandidates(currentHiraganaBuffer)
-                    lastVowelKey = "" // 연속 입력 소비
+                    lastVowelKey = "" 
                     return
                 }
             }
         }
         
-        lastVowelKey = if (isDanmoeum && "ㅏㅓㅗㅜㅣ".contains(text)) text else ""
+        lastVowelKey = if (isDanmoeum && "ㅏㅓㅗㅜㅡㅣㅐㅔ".contains(text)) text else ""
 
-        // 2. 일반 입력 처리
         val (deleteCount, textToCommit) = converter.processInput(text)
         if (deleteCount > 0) {
             currentInputConnection?.deleteSurroundingText(deleteCount, 0)

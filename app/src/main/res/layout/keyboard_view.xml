@@ -41,13 +41,15 @@
             <Button android:text="1" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="2" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="3" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="4" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="5" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="6" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="7" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="8" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="9" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="0" style="@style/KeyStyle" android:background="#ECEFF1"/>
         </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:text="ㅂ" style="@style/HangulKeyStyle"/><Button android:text="ㅈ" style="@style/HangulKeyStyle"/><Button android:text="ㄷ" style="@style/HangulKeyStyle"/><Button android:text="ㄱ" style="@style/HangulKeyStyle"/><Button android:text="ㅅ" style="@style/HangulKeyStyle"/><Button android:text="ㅐ" style="@style/HangulKeyStyle"/><Button android:text="ㅔ" style="@style/HangulKeyStyle"/>
+            <Button android:text="ㅂ" style="@style/HangulKeyStyle"/><Button android:text="ㅈ" style="@style/HangulKeyStyle"/><Button android:text="ㄷ" style="@style/HangulKeyStyle"/><Button android:text="ㄱ" style="@style/HangulKeyStyle"/><Button android:text="ㅅ" style="@style/HangulKeyStyle"/><Button android:text="ㅗ" style="@style/HangulKeyStyle"/><Button android:text="ㅐ" style="@style/HangulKeyStyle"/><Button android:text="ㅔ" style="@style/HangulKeyStyle"/>
         </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:text="ㅁ" style="@style/HangulKeyStyle"/><Button android:text="ㄴ" style="@style/HangulKeyStyle"/><Button android:text="ㅇ" style="@style/HangulKeyStyle"/><Button android:text="ㄹ" style="@style/HangulKeyStyle"/><Button android:text="ㅎ" style="@style/HangulKeyStyle"/><Button android:text="ㅗ" style="@style/HangulKeyStyle"/><Button android:text="ㅏ" style="@style/HangulKeyStyle"/>
+            <Button android:text="ㅁ" style="@style/HangulKeyStyle"/><Button android:text="ㄴ" style="@style/HangulKeyStyle"/><Button android:text="ㅇ" style="@style/HangulKeyStyle"/><Button android:text="ㄹ" style="@style/HangulKeyStyle"/><Button android:text="ㅎ" style="@style/HangulKeyStyle"/><Button android:text="ㅓ" style="@style/HangulKeyStyle"/><Button android:text="ㅏ" style="@style/HangulKeyStyle"/><Button android:text="ㅣ" style="@style/HangulKeyStyle"/>
         </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:id="@+id/btn_shift_dan" android:text="⇧" style="@style/SpecialKeyStyle" android:layout_weight="1.3"/><Button android:text="ㅋ" style="@style/HangulKeyStyle"/><Button android:text="ㅌ" style="@style/HangulKeyStyle"/><Button android:text="ㅊ" style="@style/HangulKeyStyle"/><Button android:text="ㅍ" style="@style/HangulKeyStyle"/><Button android:text="ㅜ" style="@style/HangulKeyStyle"/><Button android:text="ㅓ" style="@style/HangulKeyStyle"/><Button android:text="ㅣ" style="@style/HangulKeyStyle"/><Button android:id="@+id/btn_del_dan" android:text="⌫" style="@style/SpecialKeyStyle" android:layout_weight="1.3"/>
+            <Button android:id="@+id/btn_shift_dan" android:text="⇧" style="@style/SpecialKeyStyle" android:layout_weight="1" android:textSize="22sp"/>
+            <Button android:text="ㅋ" style="@style/HangulKeyStyle"/><Button android:text="ㅌ" style="@style/HangulKeyStyle"/><Button android:text="ㅊ" style="@style/HangulKeyStyle"/><Button android:text="ㅍ" style="@style/HangulKeyStyle"/><Button android:text="ㅜ" style="@style/HangulKeyStyle"/><Button android:text="ㅡ" style="@style/HangulKeyStyle"/>
+            <Button android:id="@+id/btn_del_dan" android:text="⌫" style="@style/SpecialKeyStyle" android:layout_weight="1"/>
         </LinearLayout>
     </LinearLayout>
 
@@ -81,9 +83,7 @@
         <Button android:id="@+id/btn_layout_toggle" android:text="두벌" style="@style/SpecialKeyStyle" android:layout_weight="1.2"/>
         <Button android:id="@+id/btn_abc" android:text="한글" style="@style/SpecialKeyStyle" android:layout_weight="1" android:visibility="gone"/>
         <Button android:text="," style="@style/KeyStyle" android:background="#ECEFF1"/>
-        
         <Button android:id="@+id/btn_space" android:text="セイゴ입력" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="3" android:layout_margin="1dp" android:background="#FFFFFF" android:textColor="#263238" android:textSize="12sp"/>
-        
         <Button android:text="." style="@style/KeyStyle" android:background="#ECEFF1"/>
         <Button android:id="@+id/btn_enter" android:text="⏎" style="@style/SpecialKeyStyle" android:layout_weight="1.3" android:backgroundTint="#42A5F5" android:textColor="#FFFFFF"/>
     </LinearLayout>
