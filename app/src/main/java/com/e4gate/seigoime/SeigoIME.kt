@@ -2,6 +2,7 @@ package com.e4gate.seigoime
 
 import android.graphics.Color
 import android.inputmethodservice.InputMethodService
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
@@ -67,7 +68,7 @@ class SeigoIME : InputMethodService() {
                         for (i in 0 until fetchedCandidates.length()) {
                             val word = fetchedCandidates.getString(i)
                             candidatesList.add(word)
-                            val btn = Button(this).apply {
+                            val btn = Button(this@SeigoIME).apply {
                                 text = word
                                 setTextColor(Color.BLACK)
                                 setBackgroundColor(Color.TRANSPARENT)
@@ -81,7 +82,10 @@ class SeigoIME : InputMethodService() {
                         keyboardView?.findViewById<View>(R.id.candidate_scroll)?.visibility = View.VISIBLE
                     }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) { 
+                Log.e("SeigoIME", "Google API 통신 또는 JSON 파싱 오류: ${e.message}", e)
+                e.printStackTrace() 
+            }
         }.start()
     }
 
@@ -152,8 +156,12 @@ class SeigoIME : InputMethodService() {
     }
 
     private fun handleEnterAction() {
-        if (currentHiraganaBuffer.isNotEmpty()) clearCandidateBuffer()
-        else handleSpecialInput("\n")
+        if (candidatesList.isNotEmpty()) {
+            val indexToCommit = if (currentCandidateIndex >= 0) currentCandidateIndex else 0
+            commitCandidateFromTouch(candidatesList[indexToCommit])
+        } else {
+            handleSpecialInput("\n")
+        }
     }
 
     private fun highlightCandidateUI(index: Int) {
@@ -173,6 +181,11 @@ class SeigoIME : InputMethodService() {
     }
 
     private fun handleNormalInput(text: String) {
+        if (candidatesList.isNotEmpty()) {
+            val indexToCommit = if (currentCandidateIndex >= 0) currentCandidateIndex else 0
+            commitCandidateFromTouch(candidatesList[indexToCommit])
+        }
+
         if (isHangulMode && isShifted) { isShifted = false; updateShiftUI() }
 
         if (isDanmoeum && (text == "ㅏ" || text == "ㅗ" || text == "ㅜ")) {
@@ -291,6 +304,7 @@ class SeigoIME : InputMethodService() {
     }
 
     private fun handleShift() { isShifted = !isShifted; updateShiftUI(); converter.clearBuffer() }
+    
     private fun updateShiftUI() {
         val v = keyboardView ?: return
         val s = v.findViewById<Button>(R.id.btn_shift)
