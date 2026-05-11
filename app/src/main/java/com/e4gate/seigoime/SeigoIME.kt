@@ -264,7 +264,6 @@ class SeigoIME : InputMethodService() {
                         "セイゴ입력" -> { handleSpaceAction() }
                         "⏎" -> { handleEnterAction() }
                         "⇧", "⇪" -> { handleShift() }
-                        "⇥" -> { handleSpecialInput("\t") }
                         "두벌", "단모" -> { toggleLayoutMode() }
                         "あ", "ア" -> { toggleKanaMode() } 
                         "!#1", "?123" -> { switchLayout(2) } 
@@ -309,16 +308,23 @@ class SeigoIME : InputMethodService() {
         val v = keyboardView ?: return
         val s = v.findViewById<Button>(R.id.btn_shift)
         val sd = v.findViewById<Button>(R.id.btn_shift_dan)
-        val sdr = v.findViewById<Button>(R.id.btn_shift_dan_right)
+        
+        // 두벌식 버튼들
         val q = v.findViewById<Button>(R.id.btn_key_q); val w = v.findViewById<Button>(R.id.btn_key_w)
         val e = v.findViewById<Button>(R.id.btn_key_e); val r = v.findViewById<Button>(R.id.btn_key_r); val t = v.findViewById<Button>(R.id.btn_key_t)
         
+        // 단모음 버튼들
+        val dq = v.findViewById<Button>(R.id.btn_dan_q); val dw = v.findViewById<Button>(R.id.btn_dan_w)
+        val de = v.findViewById<Button>(R.id.btn_dan_e); val dr = v.findViewById<Button>(R.id.btn_dan_r); val dt = v.findViewById<Button>(R.id.btn_dan_t)
+        
         if (isShifted) { 
-            s?.text = "⇪"; sd?.text = "⇪"; sdr?.text = "⇪"
+            s?.text = "⇪"; sd?.text = "⇪"
             q?.text = "ㅃ"; w?.text = "ㅉ"; e?.text = "ㄸ"; r?.text = "ㄲ"; t?.text = "ㅆ"
+            dq?.text = "ㅃ"; dw?.text = "ㅉ"; de?.text = "ㄸ"; dr?.text = "ㄲ"; dt?.text = "ㅆ"
         } else { 
-            s?.text = "⇧"; sd?.text = "⇧"; sdr?.text = "⇧"
+            s?.text = "⇧"; sd?.text = "⇧"
             q?.text = "ㅂ"; w?.text = "ㅈ"; e?.text = "ㄷ"; r?.text = "ㄱ"; t?.text = "ㅅ" 
+            dq?.text = "ㅂ"; dw?.text = "ㅈ"; de?.text = "ㄷ"; dr?.text = "ㄱ"; dt?.text = "ㅅ"
         }
     }
 
