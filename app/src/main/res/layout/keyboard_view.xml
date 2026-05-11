@@ -80,7 +80,8 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
         <Button android:id="@+id/btn_symbol" android:text="!#1" style="@style/SpecialKeyStyle" android:layout_weight="1"/>
         <Button android:id="@+id/btn_globe" android:text="🌐" style="@style/SpecialKeyStyle" android:layout_weight="1" android:textSize="22sp"/>
-        <Button android:id="@+id/btn_layout_toggle" android:text="두벌" style="@style/SpecialKeyStyle" android:layout_weight="1.2"/>
+        <Button android:id="@+id/btn_layout_toggle" android:text="두벌" style="@style/SpecialKeyStyle" android:layout_weight="1"/>
+        <Button android:id="@+id/btn_kana_toggle" android:text="あ" style="@style/SpecialKeyStyle" android:layout_weight="1" android:textColor="#1976D2" android:textStyle="bold" android:textSize="18sp"/>
         <Button android:id="@+id/btn_abc" android:text="한글" style="@style/SpecialKeyStyle" android:layout_weight="1" android:visibility="gone"/>
         <Button android:text="," style="@style/KeyStyle" android:background="#ECEFF1"/>
         <Button android:id="@+id/btn_space" android:text="セイゴ입력" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="3" android:layout_margin="1dp" android:background="#FFFFFF" android:textColor="#263238" android:textSize="12sp"/>

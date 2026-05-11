@@ -20,6 +20,7 @@ class SeigoIME : InputMethodService() {
     private var isShifted = false
     private var isHangulMode = true
     private var isDanmoeum = false 
+    private var isKatakanaMode = false 
     
     private var currentHiraganaBuffer = "" 
     private var candidatesList = mutableListOf<String>()
@@ -32,6 +33,12 @@ class SeigoIME : InputMethodService() {
         keyboardView = view
         setButtonListeners(view as ViewGroup)
         return view
+    }
+
+    private fun toKatakana(str: String): String {
+        return str.map {
+            if (it in '\u3041'..'\u3096') (it + 0x60) else it
+        }.joinToString("")
     }
 
     private fun updateCandidates(query: String) {
@@ -184,7 +191,10 @@ class SeigoIME : InputMethodService() {
                 if (replacement != null) {
                     currentInputConnection?.deleteSurroundingText(1, 0)
                     currentHiraganaBuffer = currentHiraganaBuffer.dropLast(1)
-                    currentInputConnection?.commitText(replacement, 1)
+                    
+                    val finalReplacement = if (isKatakanaMode) toKatakana(replacement) else replacement
+                    currentInputConnection?.commitText(finalReplacement, 1)
+                    
                     currentHiraganaBuffer += replacement
                     lastCommittedLength = currentHiraganaBuffer.length
                     currentCandidateIndex = -1
@@ -204,7 +214,9 @@ class SeigoIME : InputMethodService() {
                 currentHiraganaBuffer = currentHiraganaBuffer.dropLast(deleteCount)
             }
         }
-        currentInputConnection?.commitText(textToCommit, 1)
+        
+        val finalCommit = if (isKatakanaMode) toKatakana(textToCommit) else textToCommit
+        currentInputConnection?.commitText(finalCommit, 1)
         
         currentHiraganaBuffer += textToCommit
         lastCommittedLength = currentHiraganaBuffer.length
@@ -215,7 +227,8 @@ class SeigoIME : InputMethodService() {
     private fun handleSpecialInput(text: String) {
         converter.flushPending()?.let {
             currentInputConnection?.deleteSurroundingText(it.first, 0)
-            currentInputConnection?.commitText(it.second, 1)
+            val finalPending = if (isKatakanaMode) toKatakana(it.second) else it.second
+            currentInputConnection?.commitText(finalPending, 1)
         }
         currentInputConnection?.commitText(text, 1)
         clearCandidateBuffer()
@@ -240,6 +253,7 @@ class SeigoIME : InputMethodService() {
                         "⏎" -> { handleEnterAction() }
                         "⇧", "⇪" -> { handleShift() }
                         "두벌", "단모" -> { toggleLayoutMode() }
+                        "あ", "ア" -> { toggleKanaMode() } 
                         "!#1", "?123" -> { switchLayout(2) } 
                         "=\\<" -> { switchLayout(3) } 
                         "한글" -> { switchLayout(1) } 
@@ -248,6 +262,23 @@ class SeigoIME : InputMethodService() {
                     }
                 }
             }
+        }
+    }
+
+    private fun toggleKanaMode() {
+        isKatakanaMode = !isKatakanaMode
+        val btn = keyboardView?.findViewById<Button>(R.id.btn_kana_toggle)
+        btn?.text = if (isKatakanaMode) "ア" else "あ"
+        
+        if (currentHiraganaBuffer.isNotEmpty()) {
+            val ic = currentInputConnection
+            ic?.deleteSurroundingText(lastCommittedLength, 0)
+            val convertedBuffer = if (isKatakanaMode) toKatakana(currentHiraganaBuffer) else currentHiraganaBuffer
+            ic?.commitText(convertedBuffer, 1)
+            lastCommittedLength = convertedBuffer.length
+            
+            currentCandidateIndex = -1
+            highlightCandidateUI(-1)
         }
     }
 
@@ -291,6 +322,7 @@ class SeigoIME : InputMethodService() {
         v.findViewById<Button>(R.id.btn_symbol).visibility = if (layoutId == 1) View.VISIBLE else View.GONE
         v.findViewById<Button>(R.id.btn_globe).visibility = if (layoutId == 1) View.VISIBLE else View.GONE
         v.findViewById<Button>(R.id.btn_layout_toggle).visibility = if (layoutId == 1) View.VISIBLE else View.GONE
+        v.findViewById<Button>(R.id.btn_kana_toggle).visibility = if (layoutId == 1) View.VISIBLE else View.GONE
         v.findViewById<Button>(R.id.btn_abc).visibility = if (layoutId != 1) View.VISIBLE else View.GONE
         
         val abcButton = v.findViewById<Button>(R.id.btn_abc)
