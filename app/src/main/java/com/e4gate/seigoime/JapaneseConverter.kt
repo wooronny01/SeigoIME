@@ -93,10 +93,11 @@ class JapaneseConverter {
                 val c2 = inputChar
                 
                 if (c1 == 'ㄴ' || c1 == 'ㅁ' || c1 == 'ㅇ') {
-                    deleteCount = 1 // 앞의 로마자 1개 지움
+                    // [버그 수정] 'ㅇ'은 화면에 찌꺼기가 없으므로 0개 지움, ㄴ/ㅁ은 1개 지움
+                    deleteCount = if (c1 == 'ㅇ') 0 else 1 
                     textToCommit = applyKanaMode("ん") + (consonantMap[c2] ?: "")
                     pendingConsonant = c2
-                } else if (c1 == 'ㅅ' || c1 == 'ㅆ' || isSameConsonantGroup(c1, c2)) {
+                } else if (c1 == 'ㅅ' ||c11 == 'ㅆ' || isSameConsonantGroup(c1, c2)) {
                     deleteCount = 1 // 앞의 로마자 1개 지움
                     textToCommit = applyKanaMode("っ") + (consonantMap[c2] ?: "")
                     pendingConsonant = c2
