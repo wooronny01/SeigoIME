@@ -1,116 +1,189 @@
 package com.e4gate.seigoime
 
 class JapaneseConverter {
-    private var pendingConsonant = ""
 
-    fun clearBuffer() {
-        pendingConsonant = ""
+    private var pendingConsonant: Char? = null
+    private var lastVowel: Char? = null
+    private var isKatakanaMode: Boolean = false // 추후 가타카나 토글 연결용
+
+    // 1. 완벽 분리된 자음 매핑 (평음: 탁음, 격음: 청음)
+    private val consonantMap = mapOf(
+        'ㄱ' to "g", 'ㅋ' to "k", 'ㄲ' to "k",
+        'ㄷ' to "d", 'ㅌ' to "t", 'ㄸ' to "t",
+        'ㅂ' to "b", 'ㅍ' to "p", 'ㅃ' to "p",
+        'ㅅ' to "s", 'ㅆ' to "s",
+        'ㅈ' to "z", 'ㅊ' to "c", 'ㅉ' to "z",
+        'ㅇ' to "", 'ㅎ' to "h", 'ㅁ' to "m", 'ㄴ' to "n", 'ㄹ' to "r"
+    )
+
+    private val vowelMap = mapOf(
+        'ㅏ' to "a", 'ㅣ' to "i", 'ㅜ' to "u", 'ㅔ' to "e", 'ㅗ' to "o",
+        'ㅑ' to "ya", 'ㅠ' to "yu", 'ㅛ' to "yo",
+        'ㅓ' to "o", 'ㅕ' to "yo", 'ㅡ' to "u", 'ㅐ' to "e"
+    )
+
+    // 확장 요음까지 꽉 채운 매핑 사전
+    private val romajiToHiragana = mapOf(
+        "a" to "あ", "i" to "い", "u" to "う", "e" to "え", "o" to "お",
+        "ka" to "か", "ki" to "き", "ku" to "く", "ke" to "け", "ko" to "こ",
+        "sa" to "さ", "shi" to "し", "si" to "し", "su" to "す", "se" to "せ", "so" to "そ",
+        "ta" to "た", "chi" to "ち", "ci" to "ち", "tsu" to "つ", "te" to "て", "to" to "と",
+        "na" to "な", "ni" to "に", "nu" to "ぬ", "ne" to "ね", "no" to "の",
+        "ha" to "は", "hi" to "ひ", "fu" to "ふ", "hu" to "ふ", "he" to "へ", "ho" to "ほ",
+        "ma" to "ま", "mi" to "み", "mu" to "む", "me" to "め", "mo" to "も",
+        "ya" to "や", "yu" to "ゆ", "yo" to "よ",
+        "ra" to "ら", "ri" to "り", "ru" to "る", "re" to "れ", "ro" to "ろ",
+        "wa" to "わ", "wo" to "を", "nn" to "ん",
+        "ga" to "が", "gi" to "ぎ", "gu" to "ぐ", "ge" to "げ", "go" to "ご",
+        "za" to "ざ", "ji" to "じ", "zi" to "じ", "zu" to "ず", "ze" to "ぜ", "zo" to "ぞ",
+        "da" to "だ", "di" to "ぢ", "du" to "づ", "de" to "で", "do" to "ど",
+        "ba" to "ば", "bi" to "び", "bu" to "ぶ", "be" to "べ", "bo" to "ぼ",
+        "pa" to "ぱ", "pi" to "ぴ", "pu" to "ぷ", "pe" to "ぺ", "po" to "ぽ",
+        "kya" to "きゃ", "kyu" to "きゅ", "kyo" to "きょ",
+        "gya" to "ぎゃ", "gyu" to "ぎゅ", "gyo" to "ぎょ",
+        "sya" to "しゃ", "sha" to "しゃ", "syu" to "しゅ", "shu" to "しゅ", "syo" to "しょ", "sho" to "しょ",
+        "zya" to "じゃ", "ja" to "じゃ", "jya" to "じゃ", "zyu" to "じゅ", "ju" to "じゅ", "jyu" to "じゅ", "zyo" to "じょ", "jo" to "じょ", "jyo" to "じょ",
+        "tya" to "ちゃ", "cha" to "ちゃ", "cya" to "ちゃ", "tyu" to "ちゅ", "chu" to "ちゅ", "cyu" to "ちゅ", "tyo" to "ちょ", "cho" to "ちょ", "cyo" to "ちょ",
+        "nya" to "にゃ", "nyu" to "にゅ", "nyo" to "にょ",
+        "hya" to "ひゃ", "hyu" to "ひゅ", "hyo" to "ひょ",
+        "bya" to "びゃ", "byu" to "びゅ", "byo" to "びょ",
+        "pya" to "ぴゃ", "pyu" to "ぴゅ", "pyo" to "ぴょ",
+        "mya" to "みゃ", "myu" to "みゅ", "myo" to "みょ",
+        "rya" to "りゃ", "ryu" to "りゅ", "ryo" to "りょ"
+    )
+
+    /**
+     * @return Pair<지울_글자_수, 출력할_글자>
+     */
+    fun processInput(inputStr: String): Pair<Int, String> {
+        val inputChar = inputStr.firstOrNull() ?: return Pair(0, "")
+        var deleteCount = 0
+        var textToCommit = ""
+
+        if (vowelMap.containsKey(inputChar)) {
+            // [복모음 처리] ㅗ+ㅏ -> わ, ㅜ+ㅓ -> を 등
+            if (pendingConsonant == null && lastVowel != null) {
+                val combined = getCombinedVowel(lastVowel!!, inputChar)
+                if (combined != null) {
+                    lastVowel = inputChar
+                    return Pair(1, applyKanaMode(combined)) // 직전 모음(1글자) 지우고 복모음 리턴
+                }
+            }
+
+            if (pendingConsonant != null) {
+                deleteCount = 1 // 화면에 허공에 찍힌 로마자(예: 'g') 1개 지움
+                val specialCombo = checkSpecialRules(pendingConsonant!!, inputChar)
+                
+                textToCommit = if (specialCombo != null) {
+                    applyKanaMode(specialCombo)
+                } else {
+                    val romaji = consonantMap[pendingConsonant] + vowelMap[inputChar]
+                    getKana(romaji)
+                }
+                pendingConsonant = null
+                lastVowel = inputChar
+            } else {
+                // 자음 없이 모음만 들어온 경우 (ㅇ 받침 후 또는 처음)
+                textToCommit = getKana(vowelMap[inputChar] ?: "")
+                lastVowel = inputChar
+            }
+        } else if (consonantMap.containsKey(inputChar)) {
+            if (pendingConsonant != null) {
+                val c1 = pendingConsonant!!
+                val c2 = inputChar
+                
+                if (c1 == 'ㄴ' || c1 == 'ㅁ' || c1 == 'ㅇ') {
+                    deleteCount = 1 // 앞의 로마자 1개 지움
+                    textToCommit = applyKanaMode("ん") + (consonantMap[c2] ?: "")
+                    pendingConsonant = c2
+                } else if (c1 == 'ㅅ' || c1 == 'ㅆ' || isSameConsonantGroup(c1, c2)) {
+                    deleteCount = 1 // 앞의 로마자 1개 지움
+                    textToCommit = applyKanaMode("っ") + (consonantMap[c2] ?: "")
+                    pendingConsonant = c2
+                } else {
+                    deleteCount = 0
+                    textToCommit = consonantMap[c2] ?: ""
+                    pendingConsonant = c2
+                }
+            } else {
+                deleteCount = 0
+                textToCommit = consonantMap[inputChar] ?: ""
+                pendingConsonant = inputChar
+            }
+            lastVowel = null
+        }
+
+        return Pair(deleteCount, textToCommit)
     }
 
-    fun flushPending(): Pair<Int, String>? {
-        if (pendingConsonant.isNotEmpty()) {
-            val res = pendingConsonant
-            pendingConsonant = ""
-            return Pair(0, res)
+    private fun getCombinedVowel(v1: Char, v2: Char): String? {
+        val combo = "$v1$v2"
+        return when (combo) {
+            "ㅗㅏ" -> "わ"
+            "ㅜㅓ" -> "を"
+            "ㅗㅣ" -> "おぃ"
+            "ㅗㅐ" -> "おぇ"
+            "ㅜㅣ" -> "うぃ"
+            "ㅜㅔ" -> "うぇ"
+            else -> null
+        }
+    }
+
+    private fun checkSpecialRules(consonant: Char, vowel: Char): String? {
+        if (vowel == 'ㅡ') {
+            return when (consonant) {
+                'ㅅ', 'ㅆ' -> "す"
+                'ㅈ', 'ㅉ' -> "ず"
+                'ㅊ', 'ㅌ' -> "つ"
+                else -> null
+            }
         }
         return null
     }
 
-    fun processInput(text: String): Pair<Int, String> {
-        val consonants = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
-        val vowels = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ"
-
-        // 1. 자음이 들어온 경우
-        if (consonants.contains(text)) {
-            val prev = pendingConsonant
-            
-            // 🌟 1) 발음 'ん' 규칙 (ㄴ 연속, 또는 ㅇ+ㄴ)
-            if ((prev == "ㄴ" && text == "ㄴ") || (prev == "ㅇ" && text == "ㄴ")) {
-                pendingConsonant = "" 
-                return Pair(1, "ん") 
-            }
-            
-            // 🌟 2) 발음 'ん' 특수 규칙 (ㅁ 치고 ㅂ/ㅍ 칠 때 -> 신문 shimbun)
-            if (prev == "ㅁ" && "ㅂㅍㅃㅁ".contains(text)) {
-                pendingConsonant = text
-                return Pair(1, "ん" + text)
-            }
-
-            // 🌟 3) 촉음 'っ' 규칙 (같은 발음군 연속 입력)
-            val isK = "ㄱㅋㄲ".contains(prev) && "ㄱㅋㄲ".contains(text)
-            val isT = "ㄷㅌㄸ".contains(prev) && "ㄷㅌㄸ".contains(text)
-            val isS = "ㅅㅆ".contains(prev) && "ㅅㅆ".contains(text)
-            val isP = "ㅂㅍㅃ".contains(prev) && "ㅂㅍㅃ".contains(text)
-            val isJ = "ㅈㅉㅊ".contains(prev) && "ㅈㅉㅊ".contains(text)
-            
-            if (isK || isT || isS || isP || isJ) {
-                pendingConsonant = text
-                return Pair(1, "っ" + text) // 이전 자음을 지우고 촉음+현재자음 출력
-            }
-            
-            pendingConsonant = text
-            return Pair(0, text)
-        }
-
-        // 2. 모음이 들어온 경우
-        if (vowels.contains(text)) {
-            if (pendingConsonant.isNotEmpty()) {
-                val combined = getKana(pendingConsonant, text)
-                pendingConsonant = ""
-                return Pair(1, combined)
-            } else {
-                val kana = getKana("ㅇ", text)
-                return Pair(0, kana)
-            }
-        }
-        return Pair(0, text)
+    private fun isSameConsonantGroup(c1: Char, c2: Char): Boolean {
+        val g1 = getConsonantGroup(c1)
+        val g2 = getConsonantGroup(c2)
+        return g1 == g2 && g1 != -1
     }
 
-    private fun getKana(c: String, v: String): String {
-        val key = c + v
-        return kanaMap[key] ?: (c + v) 
+    private fun getConsonantGroup(c: Char): Int {
+        return when (c) {
+            'ㄱ', 'ㅋ', 'ㄲ' -> 1
+            'ㄷ', 'ㅌ', 'ㄸ' -> 2
+            'ㅂ', 'ㅍ', 'ㅃ' -> 3
+            'ㅅ', 'ㅆ' -> 4
+            'ㅈ', 'ㅉ', 'ㅊ' -> 5
+            else -> -1
+        }
     }
 
-    private val kanaMap = mapOf(
-        // ㅇ (Vowels)
-        "ㅇㅏ" to "あ", "ㅇㅣ" to "い", "ㅇㅜ" to "う", "ㅇㅡ" to "う", "ㅇㅔ" to "え", "ㅇㅗ" to "お",
-        "ㅇㅑ" to "や", "ㅇㅠ" to "ゆ", "ㅇㅛ" to "よ",
+    private fun getKana(romaji: String): String {
+        val hiragana = romajiToHiragana[romaji] ?: romaji
+        return applyKanaMode(hiragana)
+    }
 
-        // ㄱ/ㅋ (K / G)
-        "ㄱㅏ" to "か", "ㄱㅣ" to "き", "ㄱㅜ" to "く", "ㄱㅡ" to "く", "ㄱㅔ" to "け", "ㄱㅗ" to "こ",
-        "ㅋㅏ" to "か", "ㅋㅣ" to "き", "ㅋㅜ" to "く", "ㅋㅡ" to "く", "ㅋㅔ" to "け", "ㅋㅗ" to "こ",
-        "ㄲㅏ" to "が", "ㄲㅣ" to "ぎ", "ㄲㅜ" to "ぐ", "ㄲㅡ" to "ぐ", "ㄲㅔ" to "げ", "ㄲㅗ" to "ご",
+    private fun applyKanaMode(text: String): String {
+        if (!isKatakanaMode) return text
+        val katakana = java.lang.StringBuilder()
+        for (c in text) {
+            if (c in '\u3041'..'\u3096') katakana.append(c + 0x60)
+            else katakana.append(c)
+        }
+        return katakana.toString()
+    }
 
-        // ㅅ/ㅆ (S / Z) - ㅡ 완벽 지원
-        "ㅅㅏ" to "さ", "ㅅㅣ" to "し", "ㅅㅜ" to "す", "ㅅㅡ" to "す", "ㅅㅔ" to "せ", "ㅅㅗ" to "そ",
-        "ㅆㅏ" to "ざ", "ㅆㅣ" to "じ", "ㅆㅜ" to "ず", "ㅆㅡ" to "ず", "ㅆㅔ" to "ぜ", "ㅆㅗ" to "ぞ",
+    fun clearBuffer() {
+        pendingConsonant = null
+        lastVowel = null
+    }
 
-        // ㄷ/ㅌ (T / D) - ㅡ 완벽 지원
-        "ㄷㅏ" to "た", "ㄷㅣ" to "ち", "ㄷㅜ" to "つ", "ㄷㅡ" to "つ", "ㄷㅔ" to "て", "ㄷㅗ" to "と",
-        "ㅌㅏ" to "た", "ㅌㅣ" to "ち", "ㅌㅜ" to "つ", "ㅌㅡ" to "つ", "ㅌㅔ" to "て", "ㅌㅗ" to "と",
-        "ㄸㅏ" to "だ", "ㄸㅣ" to "ぢ", "ㄸㅜ" to "づ", "ㄸㅡ" to "づ", "ㄸㅔ" to "で", "ㄸㅗ" to "ど",
-
-        // ㄴ (N)
-        "ㄴㅏ" to "な", "ㄴㅣ" to "に", "ㄴㅜ" to "ぬ", "ㄴㅡ" to "ぬ", "ㄴㅔ" to "ね", "ㄴㅗ" to "の",
-
-        // ㅎ/ㅂ/ㅍ (H / B / P)
-        "ㅎㅏ" to "は", "ㅎㅣ" to "ひ", "ㅎㅜ" to "ふ", "ㅎㅡ" to "ふ", "ㅎㅔ" to "へ", "ㅎㅗ" to "ほ",
-        "ㅂㅏ" to "ば", "ㅂㅣ" to "び", "ㅂㅜ" to "ぶ", "ㅂㅡ" to "ぶ", "ㅂㅔ" to "べ", "ㅂㅗ" to "ぼ",
-        "ㅍㅏ" to "ぱ", "ㅍㅣ" to "ぴ", "ㅍㅜ" to "ぷ", "ㅍㅡ" to "ぷ", "ㅍㅔ" to "ぺ", "ㅍㅗ" to "ぽ",
-
-        // ㅁ (M)
-        "ㅁㅏ" to "ま", "ㅁㅣ" to "み", "ㅁㅜ" to "む", "ㅁㅡ" to "む", "ㅁㅔ" to "め", "ㅁㅗ" to "も",
-
-        // ㄹ (R)
-        "ㄹㅏ" to "ら", "ㄹㅣ" to "り", "ㄹㅜ" to "る", "ㄹㅡ" to "る", "ㄹㅔ" to "れ", "ㄹㅗ" to "ろ",
-
-        // ㅈ/ㅊ (Z / J / CH / TS) - ㅡ 완벽 지원
-        "ㅈㅏ" to "ざ", "ㅈㅣ" to "じ", "ㅈㅜ" to "ず", "ㅈㅡ" to "ず", "ㅈㅔ" to "ぜ", "ㅈㅗ" to "ぞ",
-        "ㅊㅏ" to "ちゃ", "ㅊㅣ" to "ち", "ㅊㅜ" to "つ", "ㅊㅡ" to "つ", "ㅊㅔ" to "て", "ㅊㅗ" to "ちょ",
-
-        // 요음 (Y-sounds)
-        "ㄱㅑ" to "きゃ", "ㄱㅠ" to "きゅ", "ㄱㅛ" to "きょ",
-        "ㄴㅑ" to "にゃ", "ㄴㅠ" to "にゅ", "ㄴㅛ" to "にょ",
-        "ㅎㅑ" to "ひゃ", "ㅎㅠ" to "ひゅ", "ㅎㅛ" to "ひょ"
-    )
+    fun flushPending(): Pair<Int, String>? {
+        if (pendingConsonant != null) {
+            val romaji = consonantMap[pendingConsonant] ?: ""
+            pendingConsonant = null
+            return Pair(1, romaji) // 버퍼에 남은 자음을 지우고 출력 확정
+        }
+        return null
+    }
 }
