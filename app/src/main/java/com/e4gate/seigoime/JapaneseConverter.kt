@@ -69,7 +69,7 @@ class JapaneseConverter {
             }
 
             if (pendingConsonant != null) {
-                // [마지막 버그 수정] 'ㅇ' 뒤에 모음을 칠 때도 지울 찌꺼기가 없으므로 0개 지움!
+                // [마지막 버그 수정 완료] 'ㅇ' 뒤에 모음을 칠 때는 지울 찌꺼기가 없으므로 0개 지움
                 deleteCount = if (pendingConsonant == 'ㅇ') 0 else 1 
                 val specialCombo = checkSpecialRules(pendingConsonant!!, inputChar)
                 
@@ -94,7 +94,7 @@ class JapaneseConverter {
                 val c2 = inputChar
                 
                 if (c1 == 'ㄴ' || c1 == 'ㅁ' || c1 == 'ㅇ') {
-                    // [버그 수정 완료] 'ㅇ'은 투명인간이므로 0개 지움
+                    // [유령 백스페이스 버그 수정 완료] 'ㅇ' 받침은 투명인간이므로 0개 지움
                     deleteCount = if (c1 == 'ㅇ') 0 else 1 
                     textToCommit = applyKanaMode("ん") + (consonantMap[c2] ?: "")
                     pendingConsonant = c2
@@ -122,10 +122,15 @@ class JapaneseConverter {
     private fun getCombinedVowel(v1: Char, v2: Char, consonant: Char?): String? {
         val combo = "$v1$v2"
         
-        // 1. 자음이 없거나 'ㅇ'일 때만 순수 복모음 발동 (ほ가 わ로 바뀌는 버그 해결)
+        // 1. 자음이 없거나 'ㅇ'일 때만 순수 복모음 발동 (문법 에러 수정 완료)
         if (consonant == null || consonant == 'ㅇ') {
             return when (combo) {
-                "ㅗㅏ" -> "わ", "ㅜㅓ" -> "を", "ㅗㅣ" -> "おぃ", "ㅗㅐ" -> "おぇ", "ㅜㅣ" -> "うぃ", "ㅜㅔ" -> "うぇ"
+                "ㅗㅏ" -> "わ"
+                "ㅜㅓ" -> "を"
+                "ㅗㅣ" -> "おぃ"
+                "ㅗㅐ" -> "おぇ"
+                "ㅜㅣ" -> "うぃ"
+                "ㅜㅔ" -> "うぇ"
                 else -> null
             }
         }
