@@ -97,7 +97,7 @@ class JapaneseConverter {
                     deleteCount = if (c1 == 'ㅇ') 0 else 1 
                     textToCommit = applyKanaMode("ん") + (consonantMap[c2] ?: "")
                     pendingConsonant = c2
-                } else if (c1 == 'ㅅ' ||c11 == 'ㅆ' || isSameConsonantGroup(c1, c2)) {
+                } else if (c1 == 'ㅅ' ||c1 == 'ㅆ' || isSameConsonantGroup(c1, c2)) {
                     deleteCount = 1 // 앞의 로마자 1개 지움
                     textToCommit = applyKanaMode("っ") + (consonantMap[c2] ?: "")
                     pendingConsonant = c2
