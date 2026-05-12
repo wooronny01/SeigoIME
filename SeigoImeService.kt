@@ -3,9 +3,6 @@ import android.view.inputmethod.InputConnection
 
 class SeigoImeService : InputMethodService() {
 
-    // ==========================================
-    // 1. 상태 및 모드 관리
-    // ==========================================
     var isKatakanaMode: Boolean = false 
 
     private var currentConsonant: Char? = null
@@ -13,9 +10,6 @@ class SeigoImeService : InputMethodService() {
     private var lastConsonant: Char? = null 
     private val composingBuffer = StringBuilder()
 
-    // ==========================================
-    // 2. 한국인 맞춤형 지능형 매핑 테이블 (평/격음 분리)
-    // ==========================================
     private val consonantMap = mapOf(
         'ㄱ' to "g", 'ㅋ' to "k", 'ㄲ' to "k",
         'ㄷ' to "d", 'ㅌ' to "t", 'ㄸ' to "t",
@@ -29,7 +23,7 @@ class SeigoImeService : InputMethodService() {
     private val vowelMap = mapOf(
         'ㅏ' to "a", 'ㅣ' to "i", 'ㅜ' to "u", 'ㅔ' to "e", 'ㅗ' to "o",
         'ㅑ' to "ya", 'ㅠ' to "yu", 'ㅛ' to "yo",
-        'ㅓ' to "o", 'ㅕ' to "yo", 'ㅡ' to "u"
+        'ㅓ' to "o", 'ㅕ' to "yo", 'ㅡ' to "u", 'ㅐ' to "e"
     )
 
     private val romajiToHiragana = mapOf(
@@ -49,12 +43,10 @@ class SeigoImeService : InputMethodService() {
         "ma" to "ま", "mi" to "み", "mu" to "む", "me" to "め", "mo" to "も",
         "ya" to "や", "yu" to "ゆ", "yo" to "よ",
         "ra" to "ら", "ri" to "り", "ru" to "る", "re" to "れ", "ro" to "ろ",
-        "wa" to "わ", "wo" to "を", "nn" to "ん"
+        "wa" to "わ", "wo" to "を", "we" to "うぇ", "wi" to "うぃ", "ui" to "うぃ", "ye" to "いぇ",
+        "nn" to "ん", "gwa" to "ぐぁ", "kwa" to "くぁ"
     )
 
-    // ==========================================
-    // 3. UI 연결부
-    // ==========================================
     fun onCharInput(charInput: Char) {
         val ic: InputConnection = currentInputConnection ?: return
         val resultString = processInternalInput(charInput)
@@ -70,17 +62,44 @@ class SeigoImeService : InputMethodService() {
         ic.deleteSurroundingText(1, 0)
     }
 
-    // ==========================================
-    // 4. 지능형 변환 엔진 (내부 로직)
-    // ==========================================
+    // [핵심 1] 복모음 지능형 조합 로직 (ㅗ+ㅏ -> wa)
+    private fun combineVowels(v1: Char, v2: Char): String? {
+        return when ("$v1$v2") {
+            "ㅗㅏ" -> "wa"
+            "ㅜㅓ" -> "wo" 
+            "ㅗㅣ" -> "we"
+            "ㅜㅣ" -> "wi"
+            "ㅡㅣ" -> "ui"
+            "ㅑㅣ" -> "ye"
+            "ㅕㅣ" -> "ye"
+            "ㅏㅣ" -> "e"
+            "ㅓㅣ" -> "e"
+            else -> null
+        }
+    }
+
     private fun processInternalInput(inputChar: Char): String {
         if (vowelMap.containsKey(inputChar)) {
+            // 1) 복모음(와, 워 등) 연속 타건 처리
+            if (currentConsonant == null && currentVowel != null) {
+                val combinedRomaji = combineVowels(currentVowel!!, inputChar)
+                if (combinedRomaji != null) {
+                    if (composingBuffer.isNotEmpty()) composingBuffer.deleteCharAt(composingBuffer.length - 1)
+                    val romaji = (if (lastConsonant != null) consonantMap[lastConsonant] else "") + combinedRomaji
+                    composingBuffer.append(getKana(romaji))
+                    currentVowel = inputChar 
+                    return composingBuffer.toString()
+                }
+            }
+            
+            // 2) 갸(ㄱ+ㅏ+ㅏ) 단모음 요음 변환 규칙
             if (currentConsonant == null && currentVowel == 'ㅏ' && inputChar == 'ㅏ' && lastConsonant != null) {
                 if (composingBuffer.isNotEmpty()) composingBuffer.deleteCharAt(composingBuffer.length - 1)
                 val romaji = consonantMap[lastConsonant] + "ya"
                 composingBuffer.append(getKana(romaji))
                 currentVowel = 'ㅑ'
-            } else if (currentConsonant != null) {
+            } 
+            else if (currentConsonant != null) {
                 val specialCombo = checkSpecialRules(currentConsonant!!, inputChar)
                 if (specialCombo != null) {
                     composingBuffer.append(applyKanaMode(specialCombo))
@@ -98,17 +117,20 @@ class SeigoImeService : InputMethodService() {
             }
         } else if (consonantMap.containsKey(inputChar)) {
             if (currentConsonant != null) {
-                if ((currentConsonant == 'ㄴ' || currentConsonant == 'ㅇ') && inputChar == 'ㄴ') {
+                val c1 = currentConsonant!!
+                val c2 = inputChar
+                
+                // [핵심 2] 한국인 맞춤 받침 발음(ん) 규칙
+                if (c1 == 'ㄴ' || c1 == 'ㅁ' || c1 == 'ㅇ') {
                     composingBuffer.append(applyKanaMode("ん"))
-                    currentConsonant = null
-                } else if (currentConsonant == 'ㅁ' && (inputChar == 'ㅂ' || inputChar == 'ㅍ')) {
-                    composingBuffer.append(applyKanaMode("ん"))
-                    currentConsonant = inputChar
-                } else if (isSameConsonantGroup(currentConsonant!!, inputChar)) {
+                    currentConsonant = c2
+                } 
+                // [핵심 3] 한국인 맞춤 촉음(っ) 규칙 (ㅅ 받침을 보편적인 촉음으로 사용)
+                else if (c1 == 'ㅅ' || c1 == 'ㅆ' || isSameConsonantGroup(c1, c2)) {
                     composingBuffer.append(applyKanaMode("っ"))
-                    currentConsonant = inputChar
+                    currentConsonant = c2
                 } else {
-                    currentConsonant = inputChar
+                    currentConsonant = c2
                 }
             } else {
                 currentConsonant = inputChar
@@ -118,9 +140,6 @@ class SeigoImeService : InputMethodService() {
         return composingBuffer.toString()
     }
 
-    // ==========================================
-    // 5. 헬퍼 함수
-    // ==========================================
     private fun checkSpecialRules(consonant: Char, vowel: Char): String? {
         if (vowel == 'ㅡ') {
             return when (consonant) {
