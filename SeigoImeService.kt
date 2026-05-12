@@ -3,21 +3,25 @@ import android.view.inputmethod.InputConnection
 
 class SeigoImeService : InputMethodService() {
 
+    // ==========================================
+    // 1. 상태 관리 (내부 버퍼 제거, 직전 상태만 추적)
+    // ==========================================
     var isKatakanaMode: Boolean = false 
 
-    private var currentConsonant: Char? = null
-    private var currentVowel: Char? = null
-    private var lastConsonant: Char? = null 
-    private val composingBuffer = StringBuilder()
+    private var pendingConsonant: Char? = null  // 초성 대기용
+    private var lastInputChar: Char? = null     // 직전에 입력된 키 (복모음 판단용)
+    private var lastConsonantForYa: Char? = null // 단모음 요음(갸) 판단용
 
+    // ==========================================
+    // 2. 완벽 매핑 테이블
+    // ==========================================
     private val consonantMap = mapOf(
         'ㄱ' to "g", 'ㅋ' to "k", 'ㄲ' to "k",
         'ㄷ' to "d", 'ㅌ' to "t", 'ㄸ' to "t",
         'ㅂ' to "b", 'ㅍ' to "p", 'ㅃ' to "p",
         'ㅅ' to "s", 'ㅆ' to "s",
         'ㅈ' to "z", 'ㅊ' to "c", 'ㅉ' to "z",
-        'ㅇ' to "",  
-        'ㅎ' to "h", 'ㅁ' to "m", 'ㄴ' to "n", 'ㄹ' to "r"
+        'ㅇ' to "", 'ㅎ' to "h", 'ㅁ' to "m", 'ㄴ' to "n", 'ㄹ' to "r"
     )
 
     private val vowelMap = mapOf(
@@ -43,103 +47,89 @@ class SeigoImeService : InputMethodService() {
         "ma" to "ま", "mi" to "み", "mu" to "む", "me" to "め", "mo" to "も",
         "ya" to "や", "yu" to "ゆ", "yo" to "よ",
         "ra" to "ら", "ri" to "り", "ru" to "る", "re" to "れ", "ro" to "ろ",
-        "wa" to "わ", "wo" to "を", "we" to "うぇ", "wi" to "うぃ", "ui" to "うぃ", "ye" to "いぇ",
-        "nn" to "ん", "gwa" to "ぐぁ", "kwa" to "くぁ"
+        "wa" to "わ", "wo" to "を", "nn" to "ん"
     )
 
-    fun onCharInput(charInput: Char) {
-        val ic: InputConnection = currentInputConnection ?: return
-        val resultString = processInternalInput(charInput)
-        if (resultString.isNotEmpty()) {
-            ic.commitText(resultString, 1)
-            clearBuffer()
+    // ==========================================
+    // 3. 다이렉트 커밋 UI 연결부
+    // ==========================================
+    fun onCharInput(inputChar: Char) {
+        val ic = currentInputConnection ?: return
+
+        if (vowelMap.containsKey(inputChar)) {
+            // [A] 복모음 지능형 치환 (화면에 찍힌 글자를 지우고 합쳐서 다시 씀)
+            if (inputChar == 'ㅏ' && lastInputChar == 'ㅗ') {
+                ic.deleteSurroundingText(1, 0)
+                ic.commitText(applyKanaMode("わ"), 1)
+                lastInputChar = 'ㅏ'
+                pendingConsonant = null
+                return
+            }
+            if (inputChar == 'ㅓ' && lastInputChar == 'ㅜ') {
+                ic.deleteSurroundingText(1, 0)
+                ic.commitText(applyKanaMode("を"), 1)
+                lastInputChar = 'ㅓ'
+                pendingConsonant = null
+                return
+            }
+            
+            // [B] 단모음 요음 변환 (ㄱ+ㅏ+ㅏ -> ぎゃ)
+            if (inputChar == 'ㅏ' && lastInputChar == 'ㅏ' && lastConsonantForYa != null) {
+                ic.deleteSurroundingText(1, 0)
+                val romaji = consonantMap[lastConsonantForYa] + "ya"
+                ic.commitText(getKana(romaji), 1)
+                lastInputChar = 'ㅑ'
+                pendingConsonant = null
+                return
+            }
+
+            // [C] 일반 초성 + 모음 출력
+            if (pendingConsonant != null) {
+                val specialCombo = checkSpecialRules(pendingConsonant!!, inputChar)
+                if (specialCombo != null) {
+                    ic.commitText(applyKanaMode(specialCombo), 1)
+                } else {
+                    val romaji = consonantMap[pendingConsonant] + vowelMap[inputChar]
+                    ic.commitText(getKana(romaji), 1)
+                }
+                lastConsonantForYa = pendingConsonant
+                pendingConsonant = null
+            } else {
+                ic.commitText(getKana(vowelMap[inputChar] ?: ""), 1)
+                lastConsonantForYa = null
+            }
+            lastInputChar = inputChar
+
+        } else if (consonantMap.containsKey(inputChar)) {
+            // [D] 자음 처리 (발음 및 촉음 규칙)
+            if (pendingConsonant != null) {
+                val c1 = pendingConsonant!!
+                val c2 = inputChar
+                
+                if (c1 == 'ㄴ' || c1 == 'ㅁ' || c1 == 'ㅇ') {
+                    ic.commitText(applyKanaMode("ん"), 1)
+                } else if (c1 == 'ㅅ' || c1 == 'ㅆ' || isSameConsonantGroup(c1, c2)) {
+                    ic.commitText(applyKanaMode("っ"), 1)
+                }
+                pendingConsonant = c2
+            } else {
+                pendingConsonant = inputChar
+            }
+            lastInputChar = inputChar
         }
     }
 
     fun onBackspace() {
-        val ic: InputConnection = currentInputConnection ?: return
-        clearBuffer()
+        val ic = currentInputConnection ?: return
+        pendingConsonant = null
+        lastInputChar = null
+        lastConsonantForYa = null
         ic.deleteSurroundingText(1, 0)
     }
 
-    // [핵심 1] 복모음 지능형 조합 로직 (ㅗ+ㅏ -> wa)
-    private fun combineVowels(v1: Char, v2: Char): String? {
-        return when ("$v1$v2") {
-            "ㅗㅏ" -> "wa"
-            "ㅜㅓ" -> "wo" 
-            "ㅗㅣ" -> "we"
-            "ㅜㅣ" -> "wi"
-            "ㅡㅣ" -> "ui"
-            "ㅑㅣ" -> "ye"
-            "ㅕㅣ" -> "ye"
-            "ㅏㅣ" -> "e"
-            "ㅓㅣ" -> "e"
-            else -> null
-        }
-    }
-
-    private fun processInternalInput(inputChar: Char): String {
-        if (vowelMap.containsKey(inputChar)) {
-            // 1) 복모음(와, 워 등) 연속 타건 처리
-            if (currentConsonant == null && currentVowel != null) {
-                val combinedRomaji = combineVowels(currentVowel!!, inputChar)
-                if (combinedRomaji != null) {
-                    if (composingBuffer.isNotEmpty()) composingBuffer.deleteCharAt(composingBuffer.length - 1)
-                    val romaji = (if (lastConsonant != null) consonantMap[lastConsonant] else "") + combinedRomaji
-                    composingBuffer.append(getKana(romaji))
-                    currentVowel = inputChar 
-                    return composingBuffer.toString()
-                }
-            }
-            
-            // 2) 갸(ㄱ+ㅏ+ㅏ) 단모음 요음 변환 규칙
-            if (currentConsonant == null && currentVowel == 'ㅏ' && inputChar == 'ㅏ' && lastConsonant != null) {
-                if (composingBuffer.isNotEmpty()) composingBuffer.deleteCharAt(composingBuffer.length - 1)
-                val romaji = consonantMap[lastConsonant] + "ya"
-                composingBuffer.append(getKana(romaji))
-                currentVowel = 'ㅑ'
-            } 
-            else if (currentConsonant != null) {
-                val specialCombo = checkSpecialRules(currentConsonant!!, inputChar)
-                if (specialCombo != null) {
-                    composingBuffer.append(applyKanaMode(specialCombo))
-                } else {
-                    val romaji = consonantMap[currentConsonant] + vowelMap[inputChar]
-                    composingBuffer.append(getKana(romaji))
-                }
-                lastConsonant = currentConsonant
-                currentVowel = inputChar
-                currentConsonant = null
-            } else {
-                composingBuffer.append(getKana(vowelMap[inputChar] ?: ""))
-                lastConsonant = null
-                currentVowel = inputChar
-            }
-        } else if (consonantMap.containsKey(inputChar)) {
-            if (currentConsonant != null) {
-                val c1 = currentConsonant!!
-                val c2 = inputChar
-                
-                // [핵심 2] 한국인 맞춤 받침 발음(ん) 규칙
-                if (c1 == 'ㄴ' || c1 == 'ㅁ' || c1 == 'ㅇ') {
-                    composingBuffer.append(applyKanaMode("ん"))
-                    currentConsonant = c2
-                } 
-                // [핵심 3] 한국인 맞춤 촉음(っ) 규칙 (ㅅ 받침을 보편적인 촉음으로 사용)
-                else if (c1 == 'ㅅ' || c1 == 'ㅆ' || isSameConsonantGroup(c1, c2)) {
-                    composingBuffer.append(applyKanaMode("っ"))
-                    currentConsonant = c2
-                } else {
-                    currentConsonant = c2
-                }
-            } else {
-                currentConsonant = inputChar
-            }
-            currentVowel = null
-        }
-        return composingBuffer.toString()
-    }
-
+    // ==========================================
+    // 4. 헬퍼 함수
+    // ==========================================
     private fun checkSpecialRules(consonant: Char, vowel: Char): String? {
         if (vowel == 'ㅡ') {
             return when (consonant) {
@@ -182,12 +172,5 @@ class SeigoImeService : InputMethodService() {
             else katakana.append(c)
         }
         return katakana.toString()
-    }
-
-    private fun clearBuffer() {
-        currentConsonant = null
-        currentVowel = null
-        lastConsonant = null
-        composingBuffer.clear()
     }
 }
