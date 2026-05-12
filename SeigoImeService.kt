@@ -4,13 +4,14 @@ import android.view.inputmethod.InputConnection
 class SeigoImeService : InputMethodService() {
 
     // ==========================================
-    // 1. 상태 관리 (내부 버퍼 제거, 직전 상태만 추적)
+    // 1. 상태 관리 (직전 출력 길이 추적 로직 추가)
     // ==========================================
     var isKatakanaMode: Boolean = false 
 
-    private var pendingConsonant: Char? = null  // 초성 대기용
-    private var lastInputChar: Char? = null     // 직전에 입력된 키 (복모음 판단용)
-    private var lastConsonantForYa: Char? = null // 단모음 요음(갸) 판단용
+    private var pendingConsonant: Char? = null  
+    private var lastVowel: Char? = null         
+    private var lastConsonantForVowel: Char? = null 
+    private var lastPrintLength: Int = 0 // [핵심] 화면에 직전에 찍힌 글자의 길이 (삭제용)
 
     // ==========================================
     // 2. 완벽 매핑 테이블
@@ -51,85 +52,137 @@ class SeigoImeService : InputMethodService() {
     )
 
     // ==========================================
-    // 3. 다이렉트 커밋 UI 연결부
+    // 3. UI 입력 처리 로직
     // ==========================================
     fun onCharInput(inputChar: Char) {
         val ic = currentInputConnection ?: return
 
+        // [A] 모음 입력 처리
         if (vowelMap.containsKey(inputChar)) {
-            // [A] 복모음 지능형 치환 (화면에 찍힌 글자를 지우고 합쳐서 다시 씀)
-            if (inputChar == 'ㅏ' && lastInputChar == 'ㅗ') {
-                ic.deleteSurroundingText(1, 0)
-                ic.commitText(applyKanaMode("わ"), 1)
-                lastInputChar = 'ㅏ'
-                pendingConsonant = null
-                return
-            }
-            if (inputChar == 'ㅓ' && lastInputChar == 'ㅜ') {
-                ic.deleteSurroundingText(1, 0)
-                ic.commitText(applyKanaMode("を"), 1)
-                lastInputChar = 'ㅓ'
-                pendingConsonant = null
-                return
-            }
             
-            // [B] 단모음 요음 변환 (ㄱ+ㅏ+ㅏ -> ぎゃ)
-            if (inputChar == 'ㅏ' && lastInputChar == 'ㅏ' && lastConsonantForYa != null) {
-                ic.deleteSurroundingText(1, 0)
-                val romaji = consonantMap[lastConsonantForYa] + "ya"
-                ic.commitText(getKana(romaji), 1)
-                lastInputChar = 'ㅑ'
-                pendingConsonant = null
+            // 1) 복모음 지능형 조합 (ㅇ+ㅗ+ㅏ -> わ, ㅇ+ㅗ+ㅣ -> おぃ 등)
+            if (pendingConsonant == null && lastVowel != null) {
+                val combinedKana = getCombinedVowel(lastVowel!!, inputChar, lastConsonantForVowel)
+                if (combinedKana != null) {
+                    ic.deleteSurroundingText(lastPrintLength, 0) // 직전 모음(예: お) 완벽 삭제
+                    val kana = applyKanaMode(combinedKana)
+                    ic.commitText(kana, 1)
+                    lastPrintLength = kana.length
+                    lastVowel = inputChar 
+                    return
+                }
+            }
+
+            // 2) 단모음 요음 변환 (ㄱ+ㅏ+ㅏ -> ぎゃ)
+            if (pendingConsonant == null && lastVowel == 'ㅏ' && inputChar == 'ㅏ' && lastConsonantForVowel != null) {
+                ic.deleteSurroundingText(lastPrintLength, 0)
+                val romaji = consonantMap[lastConsonantForVowel] + "ya"
+                val kana = getKana(romaji)
+                ic.commitText(kana, 1)
+                lastPrintLength = kana.length
+                lastVowel = 'ㅑ'
                 return
             }
 
-            // [C] 일반 초성 + 모음 출력
+            // 3) 일반 자음 + 모음 결합
             if (pendingConsonant != null) {
+                ic.deleteSurroundingText(lastPrintLength, 0) // 허공에 떠있던 로마자 자음 삭제
                 val specialCombo = checkSpecialRules(pendingConsonant!!, inputChar)
-                if (specialCombo != null) {
-                    ic.commitText(applyKanaMode(specialCombo), 1)
+                val kana = if (specialCombo != null) {
+                    applyKanaMode(specialCombo)
                 } else {
-                    val romaji = consonantMap[pendingConsonant] + vowelMap[inputChar]
-                    ic.commitText(getKana(romaji), 1)
+                    getKana(consonantMap[pendingConsonant] + vowelMap[inputChar])
                 }
-                lastConsonantForYa = pendingConsonant
-                pendingConsonant = null
-            } else {
-                ic.commitText(getKana(vowelMap[inputChar] ?: ""), 1)
-                lastConsonantForYa = null
-            }
-            lastInputChar = inputChar
+                ic.commitText(kana, 1)
+                lastPrintLength = kana.length
 
+                lastConsonantForVowel = pendingConsonant
+                pendingConsonant = null
+                lastVowel = inputChar
+            } else {
+                // 모음 단독 입력 (ㅇ 뒤에 오거나 처음 칠 때)
+                val kana = getKana(vowelMap[inputChar] ?: "")
+                ic.commitText(kana, 1)
+                lastPrintLength = kana.length
+
+                lastConsonantForVowel = null
+                lastVowel = inputChar
+            }
+
+        // [B] 자음 입력 처리 (받침 및 촉음 규칙)
         } else if (consonantMap.containsKey(inputChar)) {
-            // [D] 자음 처리 (발음 및 촉음 규칙)
             if (pendingConsonant != null) {
                 val c1 = pendingConsonant!!
                 val c2 = inputChar
                 
+                // ㄴ,ㅁ,ㅇ 받침 -> ん 변환
                 if (c1 == 'ㄴ' || c1 == 'ㅁ' || c1 == 'ㅇ') {
+                    ic.deleteSurroundingText(lastPrintLength, 0) 
                     ic.commitText(applyKanaMode("ん"), 1)
+                    
+                    val nextRomaji = consonantMap[c2] ?: ""
+                    ic.commitText(nextRomaji, 1)
+                    lastPrintLength = nextRomaji.length
+                    pendingConsonant = c2
+
+                // ㅅ,ㅆ 받침 및 동일 발음군 연타 -> っ 변환 (っㅅて 찌꺼기 완벽 해결)
                 } else if (c1 == 'ㅅ' || c1 == 'ㅆ' || isSameConsonantGroup(c1, c2)) {
+                    ic.deleteSurroundingText(lastPrintLength, 0) 
                     ic.commitText(applyKanaMode("っ"), 1)
+                    
+                    val nextRomaji = consonantMap[c2] ?: ""
+                    ic.commitText(nextRomaji, 1)
+                    lastPrintLength = nextRomaji.length
+                    pendingConsonant = c2
+                } else {
+                    // 일반 자음 연속 (그대로 다음 글자 초성으로)
+                    val romaji = consonantMap[c2] ?: ""
+                    ic.commitText(romaji, 1)
+                    lastPrintLength = romaji.length
+                    pendingConsonant = c2
                 }
-                pendingConsonant = c2
             } else {
+                // 새로운 초성 시작
+                val romaji = consonantMap[inputChar] ?: ""
+                ic.commitText(romaji, 1)
+                lastPrintLength = romaji.length
                 pendingConsonant = inputChar
             }
-            lastInputChar = inputChar
+            lastVowel = null
         }
     }
 
     fun onBackspace() {
         val ic = currentInputConnection ?: return
         pendingConsonant = null
-        lastInputChar = null
-        lastConsonantForYa = null
+        lastVowel = null
+        lastConsonantForVowel = null
         ic.deleteSurroundingText(1, 0)
     }
 
     // ==========================================
     // 4. 헬퍼 함수
     // ==========================================
+    
+    // 대표님께서 요청하신 복모음 전용 매핑 함수
+    private fun getCombinedVowel(v1: Char, v2: Char, consonant: Char?): String? {
+        val combo = "$v1$v2"
+        val isNoConsonant = (consonant == null || consonant == 'ㅇ')
+        
+        if (isNoConsonant) {
+            return when (combo) {
+                "ㅗㅏ" -> "わ"
+                "ㅜㅓ" -> "を"
+                "ㅗㅣ" -> "おぃ"
+                "ㅗㅐ" -> "おぇ"
+                "ㅜㅣ" -> "うぃ"
+                "ㅜㅔ" -> "うぇ"
+                else -> null
+            }
+        }
+        return null // 자음이 섞인 복모음은 추후 필요시 확장
+    }
+
     private fun checkSpecialRules(consonant: Char, vowel: Char): String? {
         if (vowel == 'ㅡ') {
             return when (consonant) {
