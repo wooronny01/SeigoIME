@@ -2,7 +2,6 @@ package com.e4gate.seigoime
 
 import android.graphics.Color
 import android.inputmethodservice.InputMethodService
-import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
@@ -68,7 +67,7 @@ class SeigoIME : InputMethodService() {
                         for (i in 0 until fetchedCandidates.length()) {
                             val word = fetchedCandidates.getString(i)
                             candidatesList.add(word)
-                            val btn = Button(this@SeigoIME).apply {
+                            val btn = Button(this).apply {
                                 text = word
                                 setTextColor(Color.BLACK)
                                 setBackgroundColor(Color.TRANSPARENT)
@@ -82,9 +81,7 @@ class SeigoIME : InputMethodService() {
                         keyboardView?.findViewById<View>(R.id.candidate_scroll)?.visibility = View.VISIBLE
                     }
                 }
-            } catch (e: Exception) { 
-                Log.e("SeigoIME", "API Error", e)
-            }
+            } catch (e: Exception) { e.printStackTrace() }
         }.start()
     }
 
@@ -155,12 +152,8 @@ class SeigoIME : InputMethodService() {
     }
 
     private fun handleEnterAction() {
-        if (candidatesList.isNotEmpty()) {
-            val indexToCommit = if (currentCandidateIndex >= 0) currentCandidateIndex else 0
-            commitCandidateFromTouch(candidatesList[indexToCommit])
-        } else {
-            handleSpecialInput("\n")
-        }
+        if (currentHiraganaBuffer.isNotEmpty()) clearCandidateBuffer()
+        else handleSpecialInput("\n")
     }
 
     private fun highlightCandidateUI(index: Int) {
@@ -180,11 +173,6 @@ class SeigoIME : InputMethodService() {
     }
 
     private fun handleNormalInput(text: String) {
-        if (candidatesList.isNotEmpty()) {
-            val indexToCommit = if (currentCandidateIndex >= 0) currentCandidateIndex else 0
-            commitCandidateFromTouch(candidatesList[indexToCommit])
-        }
-
         if (isHangulMode && isShifted) { isShifted = false; updateShiftUI() }
 
         if (isDanmoeum && (text == "ㅏ" || text == "ㅗ" || text == "ㅜ")) {
@@ -303,28 +291,19 @@ class SeigoIME : InputMethodService() {
     }
 
     private fun handleShift() { isShifted = !isShifted; updateShiftUI(); converter.clearBuffer() }
-    
     private fun updateShiftUI() {
         val v = keyboardView ?: return
         val s = v.findViewById<Button>(R.id.btn_shift)
         val sd = v.findViewById<Button>(R.id.btn_shift_dan)
-        
-        // 두벌식 버튼들
         val q = v.findViewById<Button>(R.id.btn_key_q); val w = v.findViewById<Button>(R.id.btn_key_w)
         val e = v.findViewById<Button>(R.id.btn_key_e); val r = v.findViewById<Button>(R.id.btn_key_r); val t = v.findViewById<Button>(R.id.btn_key_t)
-        
-        // 단모음 버튼들
-        val dq = v.findViewById<Button>(R.id.btn_dan_q); val dw = v.findViewById<Button>(R.id.btn_dan_w)
-        val de = v.findViewById<Button>(R.id.btn_dan_e); val dr = v.findViewById<Button>(R.id.btn_dan_r); val dt = v.findViewById<Button>(R.id.btn_dan_t)
         
         if (isShifted) { 
             s?.text = "⇪"; sd?.text = "⇪"
             q?.text = "ㅃ"; w?.text = "ㅉ"; e?.text = "ㄸ"; r?.text = "ㄲ"; t?.text = "ㅆ"
-            dq?.text = "ㅃ"; dw?.text = "ㅉ"; de?.text = "ㄸ"; dr?.text = "ㄲ"; dt?.text = "ㅆ"
         } else { 
             s?.text = "⇧"; sd?.text = "⇧"
             q?.text = "ㅂ"; w?.text = "ㅈ"; e?.text = "ㄷ"; r?.text = "ㄱ"; t?.text = "ㅅ" 
-            dq?.text = "ㅂ"; dw?.text = "ㅈ"; de?.text = "ㄷ"; dr?.text = "ㄱ"; dt?.text = "ㅅ"
         }
     }
 
