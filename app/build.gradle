@@ -24,3 +24,9 @@ android {
         jvmTarget = '17'
     }
 }
+
+// 구글 API 통신을 위한 코루틴 비동기 라이브러리 강제 추가
+dependencies {
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+}
