@@ -11,7 +11,6 @@ import java.io.InputStreamReader
 class KanjiDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
-        // [완성판] 안드로이드 캐시 무력화를 위해 v3 사용
         private const val DATABASE_NAME = "seigo_kanji_v3.db"
         private const val DATABASE_VERSION = 1
         private const val TABLE_NAME = "kanji_table"
@@ -24,7 +23,6 @@ class KanjiDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
                 + COLUMN_HIRAGANA + " TEXT,"
                 + COLUMN_KANJI + " TEXT" + ")")
         db.execSQL(createTable)
-        // 초고속 검색을 위한 인덱스 생성
         db.execSQL("CREATE INDEX idx_hiragana ON $TABLE_NAME($COLUMN_HIRAGANA)")
     }
 
@@ -33,7 +31,6 @@ class KanjiDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         onCreate(db)
     }
 
-    // 앱 설치 후 최초 1회, CSV 데이터를 내장 DB로 빌드
     suspend fun loadCsvToDatabase(context: Context) {
         withContext(Dispatchers.IO) {
             val db = this@KanjiDatabaseHelper.writableDatabase
@@ -76,14 +73,13 @@ class KanjiDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
     }
 
     // ==========================================
-    // [최종 마스터] 일본어 정석 변환 엔진
+    // [완성형 엔진] 정밀 검색 + 조사 분리 하이브리드
     // ==========================================
     fun getSuggestions(hiragana: String): List<String> {
         val resultSet = LinkedHashSet<String>()
         val db = this.readableDatabase
         
-        // 1. 정확히 일치하는 단어(관용어/숙어/한자) 우선 검색
-        // ORDER BY LENGTH로 단일 한자(1글자)를 항상 우선 배치
+        // 1. [정밀 타격] 정확히 일치하는 단어 검색
         val cursorExact = db.rawQuery(
             "SELECT $COLUMN_KANJI FROM $TABLE_NAME WHERE $COLUMN_HIRAGANA = ? ORDER BY LENGTH($COLUMN_KANJI) ASC", 
             arrayOf(hiragana)
@@ -95,7 +91,30 @@ class KanjiDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         }
         cursorExact.close()
 
-        // 2. 입력값으로 시작하는 긴 단어들 추가 (관용구 추천)
+        // 2. [문장형 처리] 조사 분리 로직 (Gboard 지능형 흉내내기)
+        // 일본어 필수 조사 리스트
+        val commonParticles = listOf("は", "が", "를", "を", "に", "で", "と", "も", "へ", "から", "まで")
+        for (particle in commonParticles) {
+            // 입력값이 조사로 끝나고, 몸통이 존재할 때만 작동 (안전장치)
+            if (hiragana.length > particle.length && hiragana.endsWith(particle)) {
+                val baseWord = hiragana.substring(0, hiragana.length - particle.length)
+                
+                // 몸통(명사)에 해당하는 한자를 찾아봄
+                val cursorBase = db.rawQuery(
+                    "SELECT $COLUMN_KANJI FROM $TABLE_NAME WHERE $COLUMN_HIRAGANA = ? ORDER BY LENGTH($COLUMN_KANJI) ASC LIMIT 5", 
+                    arrayOf(baseWord)
+                )
+                if (cursorBase.moveToFirst()) {
+                    do {
+                        // 찾은 한자 몸통 + 조사 결합 (예: 私 + は)
+                        resultSet.add(cursorBase.getString(0) + particle)
+                    } while (cursorBase.moveToNext())
+                }
+                cursorBase.close()
+            }
+        }
+
+        // 3. [자동완성] 입력값으로 시작하는 긴 단어들 덧붙임
         val cursorPrefix = db.rawQuery(
             "SELECT $COLUMN_KANJI FROM $TABLE_NAME WHERE $COLUMN_HIRAGANA LIKE ? AND $COLUMN_HIRAGANA != ? ORDER BY LENGTH($COLUMN_KANJI) ASC LIMIT 100", 
             arrayOf("$hiragana%", hiragana)
@@ -107,7 +126,7 @@ class KanjiDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         }
         cursorPrefix.close()
 
-        // 3. 마지막에 입력값 자체(히라가나/가타가나)를 넣어 선택권 부여
+        // 4. 입력값 원본 (히라가나/가타가나)
         resultSet.add(hiragana)
         resultSet.add(toKatakana(hiragana))
 
