@@ -12,7 +12,7 @@ class KanjiDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
 
     companion object {
         private const val DATABASE_NAME = "kanji_dictionary.db"
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2
         private const val TABLE_NAME = "kanji_table"
         private const val COLUMN_HIRAGANA = "hiragana"
         private const val COLUMN_KANJI = "kanji"
