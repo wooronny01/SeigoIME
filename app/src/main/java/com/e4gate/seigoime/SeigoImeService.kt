@@ -26,6 +26,20 @@ class SeigoImeService : InputMethodService() {
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var candidateMainContainer: LinearLayout
 
+    // [핀셋 수술 1] 오프라인 DB 변수 추가
+    private lateinit var dbHelper: KanjiDatabaseHelper
+
+    // ==========================================
+    // [핀셋 수술 2] 서비스 실행 시 DB 108만 개 불러오기
+    // ==========================================
+    override fun onCreate() {
+        super.onCreate()
+        dbHelper = KanjiDatabaseHelper(this)
+        serviceScope.launch(Dispatchers.IO) {
+            dbHelper.loadCsvToDatabase(this@SeigoImeService)
+        }
+    }
+
     // ==========================================
     // 2. 완벽 매핑 테이블
     // ==========================================
@@ -87,9 +101,13 @@ class SeigoImeService : InputMethodService() {
         }
 
         fetchJob?.cancel()
-        fetchJob = serviceScope.launch {
-            val suggestions = KanjiAPIClient.getKanjiSuggestions(hiragana)
-            updateCandidateUI(hiragana, suggestions)
+        
+        // [핀셋 수술 3] 구글 API 대신 오프라인 DB(dbHelper)에서 검색하도록 변경!
+        fetchJob = serviceScope.launch(Dispatchers.IO) {
+            val suggestions = dbHelper.getSuggestions(hiragana)
+            withContext(Dispatchers.Main) {
+                updateCandidateUI(hiragana, suggestions)
+            }
         }
     }
 
