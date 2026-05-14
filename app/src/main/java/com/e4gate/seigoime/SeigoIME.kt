@@ -55,6 +55,9 @@ class SeigoIME : InputMethodService() {
         }.joinToString("")
     }
 
+    // ==========================================
+    // [마법 1] 스마트 검색: n이 대기 중일 때도 미리 'ん'으로 찾아서 추천!
+    // ==========================================
     private fun updateCandidates(query: String) {
         if (query.isEmpty()) {
             keyboardView?.post {
@@ -64,9 +67,12 @@ class SeigoIME : InputMethodService() {
             return
         }
 
+        // 화면에 おｎ이 떠있어도, DB에는 おん으로 검색하여 恩을 즉시 찾아옵니다.
+        val searchQuery = query.replace("n", "ん").replace("ｎ", "ん")
+
         serviceScope.launch(Dispatchers.IO) {
             try {
-                val suggestions = dbHelper.getSuggestions(query)
+                val suggestions = dbHelper.getSuggestions(searchQuery)
 
                 withContext(Dispatchers.Main) {
                     val container = keyboardView?.findViewById<LinearLayout>(R.id.candidate_layout)
@@ -137,7 +143,6 @@ class SeigoIME : InputMethodService() {
     }
 
     private fun handleBackspace() {
-        // [버그 수정 1] 스페이스바로 한자를 선택한 상태에서 지우기를 누르면, 선택된 한자 1개만 깔끔하게 지웁니다.
         if (currentCandidateIndex != -1) {
             clearCandidateBuffer()
             currentInputConnection?.deleteSurroundingText(1, 0)
@@ -191,15 +196,31 @@ class SeigoIME : InputMethodService() {
     }
 
     private fun handleNormalInput(text: String) {
-        // =================================================================
-        // [버그 수정 2 핵심] 스페이스바로 한자를 고른 뒤 다음 단어를 타이핑하기 시작하면, 
-        // 꼬이지 않도록 이전 메모리를 즉시 백지화(Clear)하고 새 단어로 넘어갑니다!
-        // =================================================================
         if (currentCandidateIndex != -1) {
             clearCandidateBuffer()
         }
 
         if (isHangulMode && isShifted) { isShifted = false; updateShiftUI() }
+
+        // ==========================================
+        // [마법 2] 유령 n 퇴치 엔진 (ㄴㄴ 인터셉트)
+        // 로마자 엔진이 헛발질하기 전에, ㄴ을 두 번 치면 즉시 깔끔한 'ん'으로 확정해버립니다.
+        // ==========================================
+        if (text == "ㄴ" && (currentHiraganaBuffer.endsWith("n") || currentHiraganaBuffer.endsWith("ｎ"))) {
+            // 화면의 n을 지우고 ん으로 덮어씌움
+            currentInputConnection?.deleteSurroundingText(1, 0)
+            currentHiraganaBuffer = currentHiraganaBuffer.dropLast(1)
+            
+            val finalCommit = if (isKatakanaMode) "ン" else "ん"
+            currentInputConnection?.commitText(finalCommit, 1)
+            
+            currentHiraganaBuffer += "ん"
+            lastCommittedLength = currentHiraganaBuffer.length
+            currentCandidateIndex = -1
+            converter.clearBuffer() // 로마자 엔진의 내부 기억장치(대기중인 n)를 백지화시킴
+            updateCandidates(currentHiraganaBuffer)
+            return
+        }
 
         if (isDanmoeum && (text == "ㅏ" || text == "ㅗ" || text == "ㅜ")) {
             if (text == lastVowelKey && currentHiraganaBuffer.isNotEmpty()) {
