@@ -74,17 +74,36 @@ class KanjiDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE
         val list = mutableListOf<String>()
         val db = this.readableDatabase
         
-        val cursor = db.rawQuery(
-            "SELECT $COLUMN_KANJI FROM $TABLE_NAME WHERE $COLUMN_HIRAGANA = ? LIMIT 100", 
+        // 1. 정확히 일치하는 단어 먼저 최우선으로 찾기 (예: "えい" -> 英, 影)
+        // 제한을 100개에서 150개로 늘렸습니다.
+        val cursorExact = db.rawQuery(
+            "SELECT $COLUMN_KANJI FROM $TABLE_NAME WHERE $COLUMN_HIRAGANA = ? LIMIT 150", 
             arrayOf(hiragana)
         )
         
-        if (cursor.moveToFirst()) {
+        if (cursorExact.moveToFirst()) {
             do {
-                list.add(cursor.getString(0))
-            } while (cursor.moveToNext())
+                val kanji = cursorExact.getString(0)
+                if (!list.contains(kanji)) list.add(kanji) // 중복 방지
+            } while (cursorExact.moveToNext())
         }
-        cursor.close()
+        cursorExact.close()
+
+        // 2. Gboard처럼 입력한 글자로 '시작하는(자동완성)' 단어들 추가로 찾기 (예: "えい" -> 映画, 英語)
+        // 최대 300개까지 시원하게 끌어옵니다!
+        val cursorPrefix = db.rawQuery(
+            "SELECT $COLUMN_KANJI FROM $TABLE_NAME WHERE $COLUMN_HIRAGANA LIKE ? AND $COLUMN_HIRAGANA != ? LIMIT 300", 
+            arrayOf("$hiragana%", hiragana)
+        )
+        
+        if (cursorPrefix.moveToFirst()) {
+            do {
+                val kanji = cursorPrefix.getString(0)
+                if (!list.contains(kanji)) list.add(kanji) // 중복 방지
+            } while (cursorPrefix.moveToNext())
+        }
+        cursorPrefix.close()
+
         return list
     }
 }
