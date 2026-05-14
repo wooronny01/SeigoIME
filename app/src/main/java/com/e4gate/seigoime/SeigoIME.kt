@@ -9,7 +9,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
-import kotlinx.coroutines.* // 코루틴 추가
+import kotlinx.coroutines.* 
 
 class SeigoIME : InputMethodService() {
     private val converter = JapaneseConverter()
@@ -26,16 +26,12 @@ class SeigoIME : InputMethodService() {
     private var lastCommittedLength = 0 
     private var lastVowelKey = "" 
 
-    // ==========================================
-    // [핀셋 수술 1] 오프라인 DB와 코루틴 추가
-    // ==========================================
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var dbHelper: KanjiDatabaseHelper
 
     override fun onCreate() {
         super.onCreate()
         dbHelper = KanjiDatabaseHelper(this)
-        // 키보드가 켜질 때 DB(Mozc) 장전
         serviceScope.launch(Dispatchers.IO) {
             dbHelper.loadCsvToDatabase(this@SeigoIME)
         }
@@ -59,9 +55,6 @@ class SeigoIME : InputMethodService() {
         }.joinToString("")
     }
 
-    // ==========================================
-    // [핀셋 수술 2] 구글 접속 끊고, 오프라인 DB 연결
-    // ==========================================
     private fun updateCandidates(query: String) {
         if (query.isEmpty()) {
             keyboardView?.post {
@@ -73,7 +66,6 @@ class SeigoIME : InputMethodService() {
 
         serviceScope.launch(Dispatchers.IO) {
             try {
-                // 구글 URL 대신 우리만의 강력한 Mozc DB에서 100개씩 뽑아옵니다!
                 val suggestions = dbHelper.getSuggestions(query)
 
                 withContext(Dispatchers.Main) {
@@ -145,6 +137,13 @@ class SeigoIME : InputMethodService() {
     }
 
     private fun handleBackspace() {
+        // [버그 수정 1] 스페이스바로 한자를 선택한 상태에서 지우기를 누르면, 선택된 한자 1개만 깔끔하게 지웁니다.
+        if (currentCandidateIndex != -1) {
+            clearCandidateBuffer()
+            currentInputConnection?.deleteSurroundingText(1, 0)
+            return
+        }
+
         currentInputConnection?.deleteSurroundingText(1, 0)
         if (currentHiraganaBuffer.isNotEmpty()) {
             currentHiraganaBuffer = currentHiraganaBuffer.dropLast(1)
@@ -192,6 +191,14 @@ class SeigoIME : InputMethodService() {
     }
 
     private fun handleNormalInput(text: String) {
+        // =================================================================
+        // [버그 수정 2 핵심] 스페이스바로 한자를 고른 뒤 다음 단어를 타이핑하기 시작하면, 
+        // 꼬이지 않도록 이전 메모리를 즉시 백지화(Clear)하고 새 단어로 넘어갑니다!
+        // =================================================================
+        if (currentCandidateIndex != -1) {
+            clearCandidateBuffer()
+        }
+
         if (isHangulMode && isShifted) { isShifted = false; updateShiftUI() }
 
         if (isDanmoeum && (text == "ㅏ" || text == "ㅗ" || text == "ㅜ")) {
