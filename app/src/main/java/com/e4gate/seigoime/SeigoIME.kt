@@ -9,9 +9,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
-import org.json.JSONArray
-import java.net.URL
-import java.net.URLEncoder
+import kotlinx.coroutines.* // 코루틴 추가
 
 class SeigoIME : InputMethodService() {
     private val converter = JapaneseConverter()
@@ -28,6 +26,26 @@ class SeigoIME : InputMethodService() {
     private var lastCommittedLength = 0 
     private var lastVowelKey = "" 
 
+    // ==========================================
+    // [핀셋 수술 1] 오프라인 DB와 코루틴 추가
+    // ==========================================
+    private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private lateinit var dbHelper: KanjiDatabaseHelper
+
+    override fun onCreate() {
+        super.onCreate()
+        dbHelper = KanjiDatabaseHelper(this)
+        // 키보드가 켜질 때 DB(Mozc) 장전
+        serviceScope.launch(Dispatchers.IO) {
+            dbHelper.loadCsvToDatabase(this@SeigoIME)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceScope.cancel()
+    }
+
     override fun onCreateInputView(): View {
         val view = layoutInflater.inflate(R.layout.keyboard_view, null)
         keyboardView = view
@@ -41,6 +59,9 @@ class SeigoIME : InputMethodService() {
         }.joinToString("")
     }
 
+    // ==========================================
+    // [핀셋 수술 2] 구글 접속 끊고, 오프라인 DB 연결
+    // ==========================================
     private fun updateCandidates(query: String) {
         if (query.isEmpty()) {
             keyboardView?.post {
@@ -50,24 +71,20 @@ class SeigoIME : InputMethodService() {
             return
         }
 
-        Thread {
+        serviceScope.launch(Dispatchers.IO) {
             try {
-                val encoded = URLEncoder.encode(query, "UTF-8")
-                val url = "https://www.google.com/transliterate?langpair=ja-Hira|ja&text=$encoded"
-                val response = URL(url).readText()
-                val jsonArray = JSONArray(response)
-                val fetchedCandidates = jsonArray.getJSONArray(0).getJSONArray(1)
+                // 구글 URL 대신 우리만의 강력한 Mozc DB에서 100개씩 뽑아옵니다!
+                val suggestions = dbHelper.getSuggestions(query)
 
-                keyboardView?.post {
+                withContext(Dispatchers.Main) {
                     val container = keyboardView?.findViewById<LinearLayout>(R.id.candidate_layout)
                     container?.removeAllViews()
                     candidatesList.clear()
                     
-                    if (fetchedCandidates.length() > 0) {
-                        for (i in 0 until fetchedCandidates.length()) {
-                            val word = fetchedCandidates.getString(i)
+                    if (suggestions.isNotEmpty()) {
+                        for (word in suggestions) {
                             candidatesList.add(word)
-                            val btn = Button(this).apply {
+                            val btn = Button(this@SeigoIME).apply {
                                 text = word
                                 setTextColor(Color.BLACK)
                                 setBackgroundColor(Color.TRANSPARENT)
@@ -79,10 +96,12 @@ class SeigoIME : InputMethodService() {
                             container?.addView(btn)
                         }
                         keyboardView?.findViewById<View>(R.id.candidate_scroll)?.visibility = View.VISIBLE
+                    } else {
+                        keyboardView?.findViewById<View>(R.id.candidate_scroll)?.visibility = View.GONE
                     }
                 }
             } catch (e: Exception) { e.printStackTrace() }
-        }.start()
+        }
     }
 
     private fun commitCandidateFromTouch(word: String) {
