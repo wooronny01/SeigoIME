@@ -11,8 +11,8 @@ import java.io.InputStreamReader
 class KanjiDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
-        // 이름을 v2로 바꿔서 안드로이드에게 "새로운 DB다!" 라고 강제 인식시킴
-        private const val DATABASE_NAME = "seigo_kanji_v2.db" 
+        // 이름을 v3로 바꿔서 다이어트된 DB를 새로 설치하게 만듭니다.
+        private const val DATABASE_NAME = "seigo_kanji_v3.db" 
         private const val DATABASE_VERSION = 1
         private const val TABLE_NAME = "kanji_table"
         private const val COLUMN_HIRAGANA = "hiragana"
