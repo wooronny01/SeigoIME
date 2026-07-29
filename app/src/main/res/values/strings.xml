@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Seigo IME</string>
+    <string name="skin">스킨</string>
+    <string name="skin_mochi_short">모찌</string>
+    <string name="skin_sakura_short">사쿠라</string>
+    <string name="skin_blue_short">블루</string>
+    <string name="skin_matcha_short">말차</string>
+    <string name="language">언어</string>
+    <string name="two_set">두벌</string>
+    <string name="hangul">한글</string>
+    <string name="seigo_input">세이고 입력</string>
+    <string name="enter">입력</string>
+</resources>

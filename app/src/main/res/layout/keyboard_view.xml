@@ -1,91 +1,393 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="wrap_content"
-    android:background="#DDE3E6" android:orientation="vertical" android:padding="1dp">
+    android:id="@+id/keyboard_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="@dimen/keyboard_padding">
 
-    <HorizontalScrollView
-        android:id="@+id/candidate_scroll"
+    <LinearLayout
+        android:id="@+id/toolbar_row"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:background="#ECEFF1"
-        android:scrollbars="none"
-        android:visibility="gone">
-        <LinearLayout
-            android:id="@+id/candidate_layout"
-            android:layout_width="wrap_content"
+        android:layout_height="@dimen/candidate_height"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <HorizontalScrollView
+            android:id="@+id/candidate_scroll"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:scrollbars="none"
+            android:fillViewport="false"
+            android:visibility="invisible">
+
+            <LinearLayout
+                android:id="@+id/candidate_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="@dimen/candidate_side_padding"
+                android:paddingEnd="@dimen/candidate_side_padding" />
+        </HorizontalScrollView>
+
+        <Button
+            android:id="@+id/btn_skin"
+            android:text="@string/skin"
+            android:tag="mode"
+            style="@style/ToolbarKeyStyle" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/skin_picker_panel"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/skin_picker_height"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/btn_skin_mochi"
+            android:text="@string/skin_mochi_short"
+            android:tag="skin_option"
+            style="@style/SkinOptionKeyStyle" />
+        <Button
+            android:id="@+id/btn_skin_sakura"
+            android:text="@string/skin_sakura_short"
+            android:tag="skin_option"
+            style="@style/SkinOptionKeyStyle" />
+        <Button
+            android:id="@+id/btn_skin_blue"
+            android:text="@string/skin_blue_short"
+            android:tag="skin_option"
+            style="@style/SkinOptionKeyStyle" />
+        <Button
+            android:id="@+id/btn_skin_matcha"
+            android:text="@string/skin_matcha_short"
+            android:tag="skin_option"
+            style="@style/SkinOptionKeyStyle" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_hangul_dubeol"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/number_key_height"
+            android:orientation="horizontal">
+            <Button android:text="1" style="@style/NumberKeyStyle" />
+            <Button android:text="2" style="@style/NumberKeyStyle" />
+            <Button android:text="3" style="@style/NumberKeyStyle" />
+            <Button android:text="4" style="@style/NumberKeyStyle" />
+            <Button android:text="5" style="@style/NumberKeyStyle" />
+            <Button android:text="6" style="@style/NumberKeyStyle" />
+            <Button android:text="7" style="@style/NumberKeyStyle" />
+            <Button android:text="8" style="@style/NumberKeyStyle" />
+            <Button android:text="9" style="@style/NumberKeyStyle" />
+            <Button android:text="0" style="@style/NumberKeyStyle" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/key_height"
+            android:orientation="horizontal">
+            <Button android:id="@+id/btn_key_q" android:text="ㅂ" style="@style/HangulKeyStyle" />
+            <Button android:id="@+id/btn_key_w" android:text="ㅈ" style="@style/HangulKeyStyle" />
+            <Button android:id="@+id/btn_key_e" android:text="ㄷ" style="@style/HangulKeyStyle" />
+            <Button android:id="@+id/btn_key_r" android:text="ㄱ" style="@style/HangulKeyStyle" />
+            <Button android:id="@+id/btn_key_t" android:text="ㅅ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅛ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅕ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅑ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅐ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅔ" style="@style/HangulKeyStyle" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/key_height"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingStart="5dp"
-            android:paddingEnd="5dp">
+            android:paddingStart="@dimen/middle_row_inset"
+            android:paddingEnd="@dimen/middle_row_inset">
+            <Button android:text="ㅁ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㄴ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅇ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㄹ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅎ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅗ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅓ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅏ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅣ" style="@style/HangulKeyStyle" />
         </LinearLayout>
-    </HorizontalScrollView>
 
-    <LinearLayout android:id="@+id/layout_hangul_dubeol" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="visible">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="40dp" android:orientation="horizontal">
-            <Button android:text="1" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="2" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="3" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="4" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="5" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="6" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="7" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="8" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="9" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="0" style="@style/KeyStyle" android:background="#ECEFF1"/>
-        </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:id="@+id/btn_key_q" android:text="ㅂ" style="@style/HangulKeyStyle"/><Button android:id="@+id/btn_key_w" android:text="ㅈ" style="@style/HangulKeyStyle"/><Button android:id="@+id/btn_key_e" android:text="ㄷ" style="@style/HangulKeyStyle"/><Button android:id="@+id/btn_key_r" android:text="ㄱ" style="@style/HangulKeyStyle"/><Button android:id="@+id/btn_key_t" android:text="ㅅ" style="@style/HangulKeyStyle"/><Button android:text="ㅛ" style="@style/HangulKeyStyle"/><Button android:text="ㅕ" style="@style/HangulKeyStyle"/><Button android:text="ㅑ" style="@style/HangulKeyStyle"/><Button android:text="ㅐ" style="@style/HangulKeyStyle"/><Button android:text="ㅔ" style="@style/HangulKeyStyle"/>
-        </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal" android:paddingLeft="10dp" android:paddingRight="10dp">
-            <Button android:text="ㅁ" style="@style/HangulKeyStyle"/><Button android:text="ㄴ" style="@style/HangulKeyStyle"/><Button android:text="ㅇ" style="@style/HangulKeyStyle"/><Button android:text="ㄹ" style="@style/HangulKeyStyle"/><Button android:text="ㅎ" style="@style/HangulKeyStyle"/><Button android:text="ㅗ" style="@style/HangulKeyStyle"/><Button android:text="ㅓ" style="@style/HangulKeyStyle"/><Button android:text="ㅏ" style="@style/HangulKeyStyle"/><Button android:text="ㅣ" style="@style/HangulKeyStyle"/>
-        </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:id="@+id/btn_shift" android:text="⇧" style="@style/SpecialKeyStyle" android:layout_weight="1.3" android:textSize="22sp"/><Button android:text="ㅋ" style="@style/HangulKeyStyle"/><Button android:text="ㅌ" style="@style/HangulKeyStyle"/><Button android:text="ㅊ" style="@style/HangulKeyStyle"/><Button android:text="ㅍ" style="@style/HangulKeyStyle"/><Button android:text="ㅠ" style="@style/HangulKeyStyle"/><Button android:text="ㅜ" style="@style/HangulKeyStyle"/><Button android:text="ㅡ" style="@style/HangulKeyStyle"/><Button android:id="@+id/btn_del_dubeol" android:text="⌫" style="@style/SpecialKeyStyle" android:layout_weight="1.3"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/key_height"
+            android:orientation="horizontal">
+            <Button
+                android:id="@+id/btn_shift"
+                android:text="⇧"
+                android:tag="mode"
+                style="@style/SpecialKeyStyle"
+                android:layout_weight="1.3"
+                android:textSize="@dimen/shift_text_size" />
+            <Button android:text="ㅋ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅌ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅊ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅍ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅠ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅜ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅡ" style="@style/HangulKeyStyle" />
+            <Button
+                android:id="@+id/btn_del_dubeol"
+                android:text="⌫"
+                style="@style/SpecialKeyStyle"
+                android:layout_weight="1.3" />
         </LinearLayout>
     </LinearLayout>
 
-    <LinearLayout android:id="@+id/layout_hangul_danmoeum" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="40dp" android:orientation="horizontal">
-            <Button android:text="1" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="2" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="3" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="4" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="5" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="6" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="7" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="8" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="9" style="@style/KeyStyle" android:background="#ECEFF1"/><Button android:text="0" style="@style/KeyStyle" android:background="#ECEFF1"/>
+    <LinearLayout
+        android:id="@+id/layout_hangul_danmoeum"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/number_key_height"
+            android:orientation="horizontal">
+            <Button android:text="1" style="@style/NumberKeyStyle" />
+            <Button android:text="2" style="@style/NumberKeyStyle" />
+            <Button android:text="3" style="@style/NumberKeyStyle" />
+            <Button android:text="4" style="@style/NumberKeyStyle" />
+            <Button android:text="5" style="@style/NumberKeyStyle" />
+            <Button android:text="6" style="@style/NumberKeyStyle" />
+            <Button android:text="7" style="@style/NumberKeyStyle" />
+            <Button android:text="8" style="@style/NumberKeyStyle" />
+            <Button android:text="9" style="@style/NumberKeyStyle" />
+            <Button android:text="0" style="@style/NumberKeyStyle" />
         </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:text="ㅂ" style="@style/HangulKeyStyle"/><Button android:text="ㅈ" style="@style/HangulKeyStyle"/><Button android:text="ㄷ" style="@style/HangulKeyStyle"/><Button android:text="ㄱ" style="@style/HangulKeyStyle"/><Button android:text="ㅅ" style="@style/HangulKeyStyle"/><Button android:text="ㅗ" style="@style/HangulKeyStyle"/><Button android:text="ㅐ" style="@style/HangulKeyStyle"/><Button android:text="ㅔ" style="@style/HangulKeyStyle"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/key_height"
+            android:orientation="horizontal">
+            <Button android:text="ㅂ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅈ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㄷ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㄱ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅅ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅗ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅐ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅔ" style="@style/HangulKeyStyle" />
         </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:text="ㅁ" style="@style/HangulKeyStyle"/><Button android:text="ㄴ" style="@style/HangulKeyStyle"/><Button android:text="ㅇ" style="@style/HangulKeyStyle"/><Button android:text="ㄹ" style="@style/HangulKeyStyle"/><Button android:text="ㅎ" style="@style/HangulKeyStyle"/><Button android:text="ㅓ" style="@style/HangulKeyStyle"/><Button android:text="ㅏ" style="@style/HangulKeyStyle"/><Button android:text="ㅣ" style="@style/HangulKeyStyle"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/key_height"
+            android:orientation="horizontal">
+            <Button android:text="ㅁ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㄴ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅇ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㄹ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅎ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅓ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅏ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅣ" style="@style/HangulKeyStyle" />
         </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:id="@+id/btn_shift_dan" android:text="⇧" style="@style/SpecialKeyStyle" android:layout_weight="1" android:textSize="22sp"/>
-            <Button android:text="ㅋ" style="@style/HangulKeyStyle"/><Button android:text="ㅌ" style="@style/HangulKeyStyle"/><Button android:text="ㅊ" style="@style/HangulKeyStyle"/><Button android:text="ㅍ" style="@style/HangulKeyStyle"/><Button android:text="ㅜ" style="@style/HangulKeyStyle"/><Button android:text="ㅡ" style="@style/HangulKeyStyle"/>
-            <Button android:id="@+id/btn_del_dan" android:text="⌫" style="@style/SpecialKeyStyle" android:layout_weight="1"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/key_height"
+            android:orientation="horizontal">
+            <Button
+                android:id="@+id/btn_shift_dan"
+                android:text="⇧"
+                android:tag="mode"
+                style="@style/SpecialKeyStyle"
+                android:textSize="@dimen/shift_text_size" />
+            <Button android:text="ㅋ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅌ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅊ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅍ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅜ" style="@style/HangulKeyStyle" />
+            <Button android:text="ㅡ" style="@style/HangulKeyStyle" />
+            <Button
+                android:id="@+id/btn_del_dan"
+                android:text="⌫"
+                style="@style/SpecialKeyStyle" />
         </LinearLayout>
     </LinearLayout>
 
-    <LinearLayout android:id="@+id/layout_symbol_1" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:text="1" style="@style/HangulKeyStyle"/><Button android:text="2" style="@style/HangulKeyStyle"/><Button android:text="3" style="@style/HangulKeyStyle"/><Button android:text="4" style="@style/HangulKeyStyle"/><Button android:text="5" style="@style/HangulKeyStyle"/><Button android:text="6" style="@style/HangulKeyStyle"/><Button android:text="7" style="@style/HangulKeyStyle"/><Button android:text="8" style="@style/HangulKeyStyle"/><Button android:text="9" style="@style/HangulKeyStyle"/><Button android:text="0" style="@style/HangulKeyStyle"/>
+    <LinearLayout
+        android:id="@+id/layout_symbol_1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/key_height"
+            android:orientation="horizontal">
+            <Button android:text="1" style="@style/HangulKeyStyle" />
+            <Button android:text="2" style="@style/HangulKeyStyle" />
+            <Button android:text="3" style="@style/HangulKeyStyle" />
+            <Button android:text="4" style="@style/HangulKeyStyle" />
+            <Button android:text="5" style="@style/HangulKeyStyle" />
+            <Button android:text="6" style="@style/HangulKeyStyle" />
+            <Button android:text="7" style="@style/HangulKeyStyle" />
+            <Button android:text="8" style="@style/HangulKeyStyle" />
+            <Button android:text="9" style="@style/HangulKeyStyle" />
+            <Button android:text="0" style="@style/HangulKeyStyle" />
         </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:text="\@" style="@style/HangulKeyStyle"/><Button android:text="#" style="@style/HangulKeyStyle"/><Button android:text="$" style="@style/HangulKeyStyle"/><Button android:text="_" style="@style/HangulKeyStyle"/><Button android:text="&amp;" style="@style/HangulKeyStyle"/><Button android:text="-" style="@style/HangulKeyStyle"/><Button android:text="+" style="@style/HangulKeyStyle"/><Button android:text="(" style="@style/HangulKeyStyle"/><Button android:text=")" style="@style/HangulKeyStyle"/><Button android:text="⌫" style="@style/SpecialKeyStyle" android:layout_weight="1"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/key_height"
+            android:orientation="horizontal">
+            <Button android:text="\@" style="@style/HangulKeyStyle" />
+            <Button android:text="#" style="@style/HangulKeyStyle" />
+            <Button android:text="$" style="@style/HangulKeyStyle" />
+            <Button android:text="_" style="@style/HangulKeyStyle" />
+            <Button android:text="&amp;" style="@style/HangulKeyStyle" />
+            <Button android:text="-" style="@style/HangulKeyStyle" />
+            <Button android:text="+" style="@style/HangulKeyStyle" />
+            <Button android:text="(" style="@style/HangulKeyStyle" />
+            <Button android:text=")" style="@style/HangulKeyStyle" />
+            <Button android:text="⌫" style="@style/SpecialKeyStyle" />
         </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:text="=\\&lt;" style="@style/SpecialKeyStyle" android:layout_weight="1.3"/><Button android:text="*" style="@style/HangulKeyStyle"/><Button android:text="&quot;" style="@style/HangulKeyStyle"/><Button android:text="&apos;" style="@style/HangulKeyStyle"/><Button android:text=":" style="@style/HangulKeyStyle"/><Button android:text=";" style="@style/HangulKeyStyle"/><Button android:text="!" style="@style/HangulKeyStyle"/><Button android:text="\?" style="@style/HangulKeyStyle"/><Button android:text="." style="@style/HangulKeyStyle"/><Button android:text="/" style="@style/HangulKeyStyle"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/key_height"
+            android:orientation="horizontal">
+            <Button android:text="=\\&lt;" style="@style/SpecialKeyStyle" android:layout_weight="1.3" />
+            <Button android:text="*" style="@style/HangulKeyStyle" />
+            <Button android:text="&quot;" style="@style/HangulKeyStyle" />
+            <Button android:text="&apos;" style="@style/HangulKeyStyle" />
+            <Button android:text=":" style="@style/HangulKeyStyle" />
+            <Button android:text=";" style="@style/HangulKeyStyle" />
+            <Button android:text="!" style="@style/HangulKeyStyle" />
+            <Button android:text="\?" style="@style/HangulKeyStyle" />
+            <Button android:text="." style="@style/HangulKeyStyle" />
+            <Button android:text="/" style="@style/HangulKeyStyle" />
         </LinearLayout>
     </LinearLayout>
 
-    <LinearLayout android:id="@+id/layout_symbol_2" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:text="~" style="@style/HangulKeyStyle"/><Button android:text="`" style="@style/HangulKeyStyle"/><Button android:text="|" style="@style/HangulKeyStyle"/><Button android:text="•" style="@style/HangulKeyStyle"/><Button android:text="√" style="@style/HangulKeyStyle"/><Button android:text="π" style="@style/HangulKeyStyle"/><Button android:text="÷" style="@style/HangulKeyStyle"/><Button android:text="×" style="@style/HangulKeyStyle"/><Button android:text="§" style="@style/HangulKeyStyle"/><Button android:text="△" style="@style/HangulKeyStyle"/>
+    <LinearLayout
+        android:id="@+id/layout_symbol_2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/key_height"
+            android:orientation="horizontal">
+            <Button android:text="~" style="@style/HangulKeyStyle" />
+            <Button android:text="`" style="@style/HangulKeyStyle" />
+            <Button android:text="|" style="@style/HangulKeyStyle" />
+            <Button android:text="•" style="@style/HangulKeyStyle" />
+            <Button android:text="√" style="@style/HangulKeyStyle" />
+            <Button android:text="π" style="@style/HangulKeyStyle" />
+            <Button android:text="÷" style="@style/HangulKeyStyle" />
+            <Button android:text="×" style="@style/HangulKeyStyle" />
+            <Button android:text="§" style="@style/HangulKeyStyle" />
+            <Button android:text="△" style="@style/HangulKeyStyle" />
         </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:text="£" style="@style/HangulKeyStyle"/><Button android:text="¢" style="@style/HangulKeyStyle"/><Button android:text="€" style="@style/HangulKeyStyle"/><Button android:text="¥" style="@style/HangulKeyStyle"/><Button android:text="^" style="@style/HangulKeyStyle"/><Button android:text="°" style="@style/HangulKeyStyle"/><Button android:text="=" style="@style/HangulKeyStyle"/><Button android:text="{" style="@style/HangulKeyStyle"/><Button android:text="}" style="@style/HangulKeyStyle"/><Button android:text="⌫" style="@style/SpecialKeyStyle" android:layout_weight="1"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/key_height"
+            android:orientation="horizontal">
+            <Button android:text="£" style="@style/HangulKeyStyle" />
+            <Button android:text="¢" style="@style/HangulKeyStyle" />
+            <Button android:text="€" style="@style/HangulKeyStyle" />
+            <Button android:text="¥" style="@style/HangulKeyStyle" />
+            <Button android:text="^" style="@style/HangulKeyStyle" />
+            <Button android:text="°" style="@style/HangulKeyStyle" />
+            <Button android:text="=" style="@style/HangulKeyStyle" />
+            <Button android:text="{" style="@style/HangulKeyStyle" />
+            <Button android:text="}" style="@style/HangulKeyStyle" />
+            <Button android:text="⌫" style="@style/SpecialKeyStyle" />
         </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-            <Button android:text="\?123" style="@style/SpecialKeyStyle" android:layout_weight="1.3"/><Button android:text="%" style="@style/HangulKeyStyle"/><Button android:text="©" style="@style/HangulKeyStyle"/><Button android:text="®" style="@style/HangulKeyStyle"/><Button android:text="™" style="@style/HangulKeyStyle"/><Button android:text="✓" style="@style/HangulKeyStyle"/><Button android:text="[" style="@style/HangulKeyStyle"/><Button android:text="]" style="@style/HangulKeyStyle"/><Button android:text="&lt;" style="@style/HangulKeyStyle"/><Button android:text="&gt;" style="@style/HangulKeyStyle"/><Button android:text="\\" style="@style/HangulKeyStyle"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/key_height"
+            android:orientation="horizontal">
+            <Button android:text="\?123" style="@style/SpecialKeyStyle" android:layout_weight="1.3" />
+            <Button android:text="%" style="@style/HangulKeyStyle" />
+            <Button android:text="©" style="@style/HangulKeyStyle" />
+            <Button android:text="®" style="@style/HangulKeyStyle" />
+            <Button android:text="™" style="@style/HangulKeyStyle" />
+            <Button android:text="✓" style="@style/HangulKeyStyle" />
+            <Button android:text="[" style="@style/HangulKeyStyle" />
+            <Button android:text="]" style="@style/HangulKeyStyle" />
+            <Button android:text="&lt;" style="@style/HangulKeyStyle" />
+            <Button android:text="&gt;" style="@style/HangulKeyStyle" />
+            <Button android:text="\\" style="@style/HangulKeyStyle" />
         </LinearLayout>
     </LinearLayout>
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="50dp" android:orientation="horizontal">
-        <Button android:id="@+id/btn_symbol" android:text="!#1" style="@style/SpecialKeyStyle" android:layout_weight="1"/>
-        <Button android:id="@+id/btn_globe" android:text="🌐" style="@style/SpecialKeyStyle" android:layout_weight="1" android:textSize="22sp"/>
-        <Button android:id="@+id/btn_layout_toggle" android:text="두벌" style="@style/SpecialKeyStyle" android:layout_weight="1"/>
-        <Button android:id="@+id/btn_kana_toggle" android:text="あ" style="@style/SpecialKeyStyle" android:layout_weight="1" android:textColor="#1976D2" android:textStyle="bold" android:textSize="18sp"/>
-        <Button android:id="@+id/btn_abc" android:text="한글" style="@style/SpecialKeyStyle" android:layout_weight="1" android:visibility="gone"/>
-        <Button android:text="," style="@style/KeyStyle" android:background="#ECEFF1"/>
-        <Button android:id="@+id/btn_space" android:text="セイゴ입력" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="3" android:layout_margin="1dp" android:background="#FFFFFF" android:textColor="#263238" android:textSize="12sp"/>
-        <Button android:text="." style="@style/KeyStyle" android:background="#ECEFF1"/>
-        <Button android:id="@+id/btn_enter" android:text="⏎" style="@style/SpecialKeyStyle" android:layout_weight="1.3" android:backgroundTint="#42A5F5" android:textColor="#FFFFFF"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/bottom_key_height"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_symbol"
+            android:text="!#1"
+            style="@style/SpecialKeyStyle" />
+
+        <Button
+            android:id="@+id/btn_globe"
+            android:text="@string/language"
+            style="@style/SpecialKeyStyle" />
+
+        <Button
+            android:id="@+id/btn_layout_toggle"
+            android:text="@string/two_set"
+            android:tag="mode"
+            style="@style/SpecialKeyStyle" />
+
+        <Button
+            android:id="@+id/btn_kana_toggle"
+            android:text="あ"
+            android:tag="mode"
+            style="@style/SpecialKeyStyle" />
+
+        <Button
+            android:id="@+id/btn_abc"
+            android:text="@string/hangul"
+            style="@style/SpecialKeyStyle"
+            android:visibility="gone" />
+
+        <Button
+            android:text=","
+            style="@style/PunctuationKeyStyle" />
+
+        <Button
+            android:id="@+id/btn_space"
+            android:text="@string/seigo_input"
+            android:tag="space"
+            style="@style/SpaceKeyStyle" />
+
+        <Button
+            android:text="."
+            style="@style/PunctuationKeyStyle" />
+
+        <Button
+            android:id="@+id/btn_enter"
+            android:text="@string/enter"
+            android:tag="accent"
+            style="@style/EnterKeyStyle" />
     </LinearLayout>
 </LinearLayout>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="keyboard_padding">4dp</dimen>
+    <dimen name="key_gap">2dp</dimen>
+    <dimen name="candidate_height">46dp</dimen>
+    <dimen name="candidate_side_padding">2dp</dimen>
+    <dimen name="skin_picker_height">48dp</dimen>
+    <dimen name="number_key_height">38dp</dimen>
+    <dimen name="key_height">52dp</dimen>
+    <dimen name="bottom_key_height">54dp</dimen>
+    <dimen name="middle_row_inset">10dp</dimen>
+    <dimen name="toolbar_button_width">58dp</dimen>
+    <dimen name="toolbar_button_height">40dp</dimen>
+
+    <dimen name="key_text_size">20sp</dimen>
+    <dimen name="number_text_size">14sp</dimen>
+    <dimen name="special_text_size">14sp</dimen>
+    <dimen name="space_text_size">12sp</dimen>
+    <dimen name="enter_text_size">12sp</dimen>
+    <dimen name="toolbar_text_size">13sp</dimen>
+    <dimen name="skin_option_text_size">13sp</dimen>
+    <dimen name="shift_text_size">22sp</dimen>
+</resources>
