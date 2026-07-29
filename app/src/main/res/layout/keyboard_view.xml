@@ -69,6 +69,32 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/character_type_panel"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/skin_picker_height"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/btn_char_hiragana"
+            android:text="@string/char_type_hiragana"
+            android:tag="char_option"
+            style="@style/SkinOptionKeyStyle" />
+
+        <Button
+            android:id="@+id/btn_char_full_katakana"
+            android:text="@string/char_type_full_katakana"
+            android:tag="char_option"
+            style="@style/SkinOptionKeyStyle" />
+
+        <Button
+            android:id="@+id/btn_char_half_katakana"
+            android:text="@string/char_type_half_katakana"
+            android:tag="char_option"
+            style="@style/SkinOptionKeyStyle" />
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/layout_hangul_dubeol"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -361,6 +387,7 @@
         <Button
             android:id="@+id/btn_kana_toggle"
             android:text="あ"
+            android:contentDescription="@string/character_type"
             android:tag="mode"
             style="@style/SpecialKeyStyle" />
 

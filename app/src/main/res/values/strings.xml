@@ -11,4 +11,8 @@
     <string name="hangul">한글</string>
     <string name="seigo_input">세이고 입력</string>
     <string name="enter">입력</string>
+    <string name="character_type">文字種</string>
+    <string name="char_type_hiragana">あ ひらがな</string>
+    <string name="char_type_full_katakana">ア 全角カナ</string>
+    <string name="char_type_half_katakana">ｱ 半角カナ</string>
 </resources>

@@ -1,27 +1,11 @@
-# Seigo IME v1.1 변경사항
+# SeigoIME v1.2 변경 사항
 
-## 사용자 기능
-- 4종 스킨 선택 및 영구 저장
-- 앱 런처용 스킨 설정 화면
-- 자판 내 빠른 스킨 선택 패널
-- 후보어 선택 상태를 테마별 색상으로 표시
-- 현재 입력 모드와 Shift 상태 강조
-- 터치 눌림 효과와 햅틱 반응
-- 가로 화면 전용 축소 치수
-
-## 코드 및 배포
-- 테마 팔레트를 `KeyboardSkin` enum으로 중앙 관리
-- 하드코딩된 서명 비밀번호 제거
-- `keystore.properties`가 있을 때만 Release 서명 적용
-- versionCode 2, versionName 1.1
-
-## GitHub APK 자동 빌드 추가
-
-- GitHub Actions 수동 실행 버튼
-- Android SDK 34와 Gradle 8.1.1 자동 준비
-- 전체 일본어 사전 데이터 검증
-- Debug APK 자동 생성
-- GitHub Secrets 기반 Release 서명
-- Android 14 에뮬레이터 설치 스모크 테스트
-- Windows 원클릭 실행/다운로드 스크립트
-- Codespaces 재현 가능한 Android 빌드 환경
+- 후보창 맨 앞에 전각 가타카나와 반각 가타카나 후보 자동 표시
+- `あ` 버튼 짧게 누르기: `あ → ア → ｱ` 순환 변환
+- `あ` 버튼 길게 누르기: `文字種` 패널에서 직접 선택
+- 숫자·기호 화면에서 동일 버튼을 `半 ↔ 全`로 사용
+- 전각·반각 상태에서 조합문자 삭제 길이 보정
+- 빠르게 입력할 때 오래된 후보 검색 결과가 덮어쓰지 않도록 요청 순서 보호
+- 일반 숫자 키 입력 처리 개선
+- 버전 1.2 / versionCode 3
+- GitHub Actions에서 Debug APK, 선택적으로 서명된 Release APK 생성

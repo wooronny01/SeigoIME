@@ -25,10 +25,24 @@ class SeigoIME : InputMethodService() {
     private val converter = JapaneseConverter()
     private var keyboardView: View? = null
 
+    private enum class KanaDisplayMode(val buttonText: String) {
+        HIRAGANA("あ"),
+        FULL_WIDTH_KATAKANA("ア"),
+        HALF_WIDTH_KATAKANA("ｱ");
+
+        fun next(): KanaDisplayMode = when (this) {
+            HIRAGANA -> FULL_WIDTH_KATAKANA
+            FULL_WIDTH_KATAKANA -> HALF_WIDTH_KATAKANA
+            HALF_WIDTH_KATAKANA -> HIRAGANA
+        }
+    }
+
     private var isShifted = false
     private var isHangulMode = true
     private var isDanmoeum = false
-    private var isKatakanaMode = false
+    private var kanaDisplayMode = KanaDisplayMode.HIRAGANA
+    private var useFullWidthSymbols = false
+    private var candidateRequestId = 0L
 
     private var currentHiraganaBuffer = ""
     private val candidatesList = mutableListOf<String>()
@@ -76,15 +90,23 @@ class SeigoIME : InputMethodService() {
         }
     }
 
-    private fun toKatakana(str: String): String {
-        return str.map {
-            if (it in '\u3041'..'\u3096') (it + 0x60) else it
-        }.joinToString("")
+    private fun displayKana(text: String): String = when (kanaDisplayMode) {
+        KanaDisplayMode.HIRAGANA -> text
+        KanaDisplayMode.FULL_WIDTH_KATAKANA ->
+            CharacterWidthConverter.hiraganaToKatakana(text)
+        KanaDisplayMode.HALF_WIDTH_KATAKANA ->
+            CharacterWidthConverter.hiraganaToHalfWidthKatakana(text)
+    }
+
+    private fun updateCommittedLengthFromBuffer() {
+        lastCommittedLength = displayKana(currentHiraganaBuffer).length
     }
 
     private fun updateCandidates(query: String) {
+        val requestId = ++candidateRequestId
         if (query.isEmpty()) {
             keyboardView?.post {
+                if (requestId != candidateRequestId) return@post
                 keyboardView
                     ?.findViewById<LinearLayout>(R.id.candidate_layout)
                     ?.removeAllViews()
@@ -99,53 +121,62 @@ class SeigoIME : InputMethodService() {
         serviceScope.launch(Dispatchers.IO) {
             try {
                 val suggestions = dbHelper.getSuggestions(searchQuery)
+                val allCandidates = linkedSetOf<String>()
+
+                if (searchQuery.any { it in 'ぁ'..'ゖ' }) {
+                    val fullWidthKatakana =
+                        CharacterWidthConverter.hiraganaToKatakana(searchQuery)
+                    val halfWidthKatakana =
+                        CharacterWidthConverter.katakanaToHalfWidth(fullWidthKatakana)
+                    allCandidates.add(fullWidthKatakana)
+                    allCandidates.add(halfWidthKatakana)
+                }
+                suggestions.forEach { allCandidates.add(it) }
+
                 withContext(Dispatchers.Main) {
+                    if (requestId != candidateRequestId) return@withContext
                     val container =
                         keyboardView?.findViewById<LinearLayout>(R.id.candidate_layout)
                     container?.removeAllViews()
                     candidatesList.clear()
 
-                    if (suggestions.isNotEmpty()) {
-                        suggestions.forEach { word ->
-                            candidatesList.add(word)
-                            val candidateButton = Button(this@SeigoIME).apply {
-                                text = word
-                                tag = "candidate"
-                                textSize = 17f
-                                isAllCaps = false
-                                includeFontPadding = false
-                                gravity = Gravity.CENTER
-                                minWidth = 0
-                                minimumWidth = 0
-                                minHeight = 0
-                                minimumHeight = 0
-                                stateListAnimator = null
-                                setPadding(dp(18), 0, dp(18), 0)
-                                setOnClickListener {
-                                    performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    commitCandidateFromTouch(word)
-                                }
+                    allCandidates.forEach { word ->
+                        candidatesList.add(word)
+                        val candidateButton = Button(this@SeigoIME).apply {
+                            text = word
+                            tag = "candidate"
+                            textSize = 17f
+                            isAllCaps = false
+                            includeFontPadding = false
+                            gravity = Gravity.CENTER
+                            minWidth = 0
+                            minimumWidth = 0
+                            minHeight = 0
+                            minimumHeight = 0
+                            stateListAnimator = null
+                            setPadding(dp(18), 0, dp(18), 0)
+                            setOnClickListener {
+                                performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                commitCandidateFromTouch(word)
                             }
-                            val params = LinearLayout.LayoutParams(
-                                ViewGroup.LayoutParams.WRAP_CONTENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            ).apply {
-                                marginStart = dp(3)
-                                marginEnd = dp(3)
-                                topMargin = dp(4)
-                                bottomMargin = dp(4)
-                            }
-                            container?.addView(candidateButton, params)
-                            styleCandidateButton(candidateButton, selected = false)
                         }
-                        keyboardView
-                            ?.findViewById<View>(R.id.candidate_scroll)
-                            ?.visibility = View.VISIBLE
-                    } else {
-                        keyboardView
-                            ?.findViewById<View>(R.id.candidate_scroll)
-                            ?.visibility = View.INVISIBLE
+                        val params = LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        ).apply {
+                            marginStart = dp(3)
+                            marginEnd = dp(3)
+                            topMargin = dp(4)
+                            bottomMargin = dp(4)
+                        }
+                        container?.addView(candidateButton, params)
+                        styleCandidateButton(candidateButton, selected = false)
                     }
+
+                    keyboardView
+                        ?.findViewById<View>(R.id.candidate_scroll)
+                        ?.visibility =
+                        if (allCandidates.isNotEmpty()) View.VISIBLE else View.INVISIBLE
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -160,13 +191,17 @@ class SeigoIME : InputMethodService() {
         clearCandidateBuffer()
     }
 
-    private fun clearCandidateBuffer() {
+    private fun clearCandidateBuffer(resetCharacterType: Boolean = true) {
         currentHiraganaBuffer = ""
         candidatesList.clear()
         currentCandidateIndex = -1
         lastCommittedLength = 0
         lastVowelKey = ""
         converter.clearBuffer()
+        if (resetCharacterType) {
+            kanaDisplayMode = KanaDisplayMode.HIRAGANA
+        }
+        updateCharacterTypeButton()
         updateCandidates("")
     }
 
@@ -216,12 +251,15 @@ class SeigoIME : InputMethodService() {
             return
         }
 
-        currentInputConnection?.deleteSurroundingText(1, 0)
         if (currentHiraganaBuffer.isNotEmpty()) {
+            val logicalLast = currentHiraganaBuffer.takeLast(1)
+            currentInputConnection?.deleteSurroundingText(displayKana(logicalLast).length, 0)
             currentHiraganaBuffer = currentHiraganaBuffer.dropLast(1)
-            lastCommittedLength = currentHiraganaBuffer.length
+            updateCommittedLengthFromBuffer()
             currentCandidateIndex = -1
             updateCandidates(currentHiraganaBuffer)
+        } else {
+            currentInputConnection?.deleteSurroundingText(1, 0)
         }
         lastVowelKey = ""
         converter.clearBuffer()
@@ -291,11 +329,11 @@ class SeigoIME : InputMethodService() {
             currentInputConnection?.deleteSurroundingText(1, 0)
             currentHiraganaBuffer = currentHiraganaBuffer.dropLast(1)
 
-            val finalCommit = if (isKatakanaMode) "ン" else "ん"
+            val finalCommit = displayKana("ん")
             currentInputConnection?.commitText(finalCommit, 1)
 
             currentHiraganaBuffer += "ん"
-            lastCommittedLength = currentHiraganaBuffer.length
+            updateCommittedLengthFromBuffer()
             currentCandidateIndex = -1
             converter.clearBuffer()
             updateCandidates(currentHiraganaBuffer)
@@ -336,15 +374,15 @@ class SeigoIME : InputMethodService() {
                 }
 
                 if (replacement != null) {
-                    currentInputConnection?.deleteSurroundingText(1, 0)
+                    currentInputConnection
+                        ?.deleteSurroundingText(displayKana(lastChar).length, 0)
                     currentHiraganaBuffer = currentHiraganaBuffer.dropLast(1)
 
-                    val finalReplacement =
-                        if (isKatakanaMode) toKatakana(replacement) else replacement
+                    val finalReplacement = displayKana(replacement)
                     currentInputConnection?.commitText(finalReplacement, 1)
 
                     currentHiraganaBuffer += replacement
-                    lastCommittedLength = currentHiraganaBuffer.length
+                    updateCommittedLengthFromBuffer()
                     currentCandidateIndex = -1
                     updateCandidates(currentHiraganaBuffer)
                     lastVowelKey = ""
@@ -357,29 +395,31 @@ class SeigoIME : InputMethodService() {
             if (isDanmoeum && "ㅏㅓㅗㅜㅡㅣㅐㅔ".contains(text)) text else ""
 
         val (deleteCount, textToCommit) = converter.processInput(text)
-        if (deleteCount > 0) {
-            currentInputConnection?.deleteSurroundingText(deleteCount, 0)
-            if (currentHiraganaBuffer.length >= deleteCount) {
-                currentHiraganaBuffer =
-                    currentHiraganaBuffer.dropLast(deleteCount)
-            }
+        if (deleteCount > 0 && currentHiraganaBuffer.length >= deleteCount) {
+            val logicalDeleted = currentHiraganaBuffer.takeLast(deleteCount)
+            currentInputConnection
+                ?.deleteSurroundingText(displayKana(logicalDeleted).length, 0)
+            currentHiraganaBuffer = currentHiraganaBuffer.dropLast(deleteCount)
         }
 
-        val finalCommit =
-            if (isKatakanaMode) toKatakana(textToCommit) else textToCommit
+        val finalCommit = displayKana(textToCommit)
         currentInputConnection?.commitText(finalCommit, 1)
 
         currentHiraganaBuffer += textToCommit
-        lastCommittedLength = currentHiraganaBuffer.length
+        updateCommittedLengthFromBuffer()
         currentCandidateIndex = -1
         updateCandidates(currentHiraganaBuffer)
     }
 
     private fun handleSpecialInput(text: String) {
-        converter.flushPending()?.let {
-            currentInputConnection?.deleteSurroundingText(it.first, 0)
-            val finalPending = if (isKatakanaMode) toKatakana(it.second) else it.second
-            currentInputConnection?.commitText(finalPending, 1)
+        converter.flushPending()?.let { pending ->
+            if (currentHiraganaBuffer.isNotEmpty() && pending.first > 0) {
+                val logicalDeleted = currentHiraganaBuffer.takeLast(pending.first)
+                currentInputConnection
+                    ?.deleteSurroundingText(displayKana(logicalDeleted).length, 0)
+                currentHiraganaBuffer = currentHiraganaBuffer.dropLast(pending.first)
+            }
+            currentInputConnection?.commitText(displayKana(pending.second), 1)
         }
         currentInputConnection?.commitText(text, 1)
         clearCandidateBuffer()
@@ -391,10 +431,18 @@ class SeigoIME : InputMethodService() {
             if (child is ViewGroup) {
                 setButtonListeners(child)
             } else if (child is Button) {
-                if (child.id == R.id.btn_space) {
-                    child.setOnLongClickListener {
+                when (child.id) {
+                    R.id.btn_space -> child.setOnLongClickListener {
                         showInputMethodPicker()
                         true
+                    }
+                    R.id.btn_kana_toggle -> child.setOnLongClickListener {
+                        if (isHangulMode) {
+                            toggleCharacterTypePicker()
+                            true
+                        } else {
+                            false
+                        }
                     }
                 }
 
@@ -410,7 +458,13 @@ class SeigoIME : InputMethodService() {
                         R.id.btn_skin_matcha -> selectSkin(KeyboardSkin.MATCHA_NIGHT)
                         R.id.btn_globe -> showInputMethodPicker()
                         R.id.btn_layout_toggle -> toggleLayoutMode()
-                        R.id.btn_kana_toggle -> toggleKanaMode()
+                        R.id.btn_kana_toggle -> handleCharacterTypeButton()
+                        R.id.btn_char_hiragana ->
+                            selectKanaDisplayMode(KanaDisplayMode.HIRAGANA)
+                        R.id.btn_char_full_katakana ->
+                            selectKanaDisplayMode(KanaDisplayMode.FULL_WIDTH_KATAKANA)
+                        R.id.btn_char_half_katakana ->
+                            selectKanaDisplayMode(KanaDisplayMode.HALF_WIDTH_KATAKANA)
                         R.id.btn_symbol -> switchLayout(2)
                         R.id.btn_abc -> switchLayout(1)
                         else -> dispatchTextButton(child.text.toString())
@@ -426,14 +480,29 @@ class SeigoIME : InputMethodService() {
             "⏎", "입력" -> handleEnterAction()
             "⇧", "⇪" -> handleShift()
             "두벌", "단모" -> toggleLayoutMode()
-            "あ", "ア" -> toggleKanaMode()
+            "あ", "ア", "ｱ", "半", "全" -> handleCharacterTypeButton()
             "!#1", "?123" -> switchLayout(2)
             "=\\<" -> switchLayout(3)
             "한글" -> switchLayout(1)
             "🌐", "언어" -> showInputMethodPicker()
-            else -> handleNormalInput(text)
+            else -> {
+                if (isKoreanJamoKey(text) && isHangulMode) {
+                    handleNormalInput(text)
+                } else {
+                    val literal =
+                        if (!isHangulMode && useFullWidthSymbols) {
+                            CharacterWidthConverter.asciiToFullWidth(text)
+                        } else {
+                            CharacterWidthConverter.fullWidthAsciiToHalfWidth(text)
+                        }
+                    handleSpecialInput(literal)
+                }
+            }
         }
     }
+
+    private fun isKoreanJamoKey(text: String): Boolean =
+        text.length == 1 && text[0] in 'ㄱ'..'ㅣ'
 
     private fun showInputMethodPicker() {
         (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
@@ -442,6 +511,9 @@ class SeigoIME : InputMethodService() {
 
     private fun toggleSkinPicker() {
         val panel = keyboardView?.findViewById<View>(R.id.skin_picker_panel) ?: return
+        keyboardView
+            ?.findViewById<View>(R.id.character_type_panel)
+            ?.visibility = View.GONE
         panel.visibility =
             if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE
         updateModeStates()
@@ -457,27 +529,74 @@ class SeigoIME : InputMethodService() {
         updateModeStates()
     }
 
-    private fun toggleKanaMode() {
-        isKatakanaMode = !isKatakanaMode
-        keyboardView
-            ?.findViewById<Button>(R.id.btn_kana_toggle)
-            ?.text = if (isKatakanaMode) "ア" else "あ"
+    private fun handleCharacterTypeButton() {
+        if (isHangulMode) {
+            selectKanaDisplayMode(kanaDisplayMode.next(), closePanel = false)
+        } else {
+            useFullWidthSymbols = !useFullWidthSymbols
+            updateCharacterTypeButton()
+            updateModeStates()
+        }
+    }
 
+    private fun toggleCharacterTypePicker() {
+        val panel = keyboardView?.findViewById<View>(R.id.character_type_panel) ?: return
+        keyboardView
+            ?.findViewById<View>(R.id.skin_picker_panel)
+            ?.visibility = View.GONE
+        panel.visibility =
+            if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        updateCharacterTypeOptionStates()
+        updateModeStates()
+    }
+
+    private fun selectKanaDisplayMode(
+        mode: KanaDisplayMode,
+        closePanel: Boolean = true
+    ) {
+        kanaDisplayMode = mode
         if (currentHiraganaBuffer.isNotEmpty()) {
-            val ic = currentInputConnection
-            ic?.deleteSurroundingText(lastCommittedLength, 0)
-            val convertedBuffer =
-                if (isKatakanaMode) {
-                    toKatakana(currentHiraganaBuffer)
-                } else {
-                    currentHiraganaBuffer
-                }
-            ic?.commitText(convertedBuffer, 1)
+            currentInputConnection?.deleteSurroundingText(lastCommittedLength, 0)
+            val convertedBuffer = displayKana(currentHiraganaBuffer)
+            currentInputConnection?.commitText(convertedBuffer, 1)
             lastCommittedLength = convertedBuffer.length
             currentCandidateIndex = -1
             highlightCandidateUI(-1)
         }
+        if (closePanel) {
+            keyboardView
+                ?.findViewById<View>(R.id.character_type_panel)
+                ?.visibility = View.GONE
+        }
+        updateCharacterTypeButton()
+        updateCharacterTypeOptionStates()
         updateModeStates()
+    }
+
+    private fun updateCharacterTypeButton() {
+        keyboardView
+            ?.findViewById<Button>(R.id.btn_kana_toggle)
+            ?.text = if (isHangulMode) {
+                kanaDisplayMode.buttonText
+            } else {
+                if (useFullWidthSymbols) "全" else "半"
+            }
+    }
+
+    private fun updateCharacterTypeOptionStates() {
+        val view = keyboardView ?: return
+        styleModeButton(
+            view.findViewById<Button>(R.id.btn_char_hiragana),
+            active = kanaDisplayMode == KanaDisplayMode.HIRAGANA
+        )
+        styleModeButton(
+            view.findViewById<Button>(R.id.btn_char_full_katakana),
+            active = kanaDisplayMode == KanaDisplayMode.FULL_WIDTH_KATAKANA
+        )
+        styleModeButton(
+            view.findViewById<Button>(R.id.btn_char_half_katakana),
+            active = kanaDisplayMode == KanaDisplayMode.HALF_WIDTH_KATAKANA
+        )
     }
 
     private fun toggleLayoutMode() {
@@ -548,8 +667,7 @@ class SeigoIME : InputMethodService() {
             if (layoutId == 1) View.VISIBLE else View.GONE
         view.findViewById<Button>(R.id.btn_layout_toggle).visibility =
             if (layoutId == 1) View.VISIBLE else View.GONE
-        view.findViewById<Button>(R.id.btn_kana_toggle).visibility =
-            if (layoutId == 1) View.VISIBLE else View.GONE
+        view.findViewById<Button>(R.id.btn_kana_toggle).visibility = View.VISIBLE
         view.findViewById<Button>(R.id.btn_abc).visibility =
             if (layoutId != 1) View.VISIBLE else View.GONE
 
@@ -561,7 +679,9 @@ class SeigoIME : InputMethodService() {
         }
 
         isHangulMode = layoutId == 1
+        view.findViewById<View>(R.id.character_type_panel)?.visibility = View.GONE
         converter.clearBuffer()
+        updateCharacterTypeButton()
         updateModeStates()
     }
 
@@ -574,6 +694,8 @@ class SeigoIME : InputMethodService() {
         view.findViewById<View>(R.id.candidate_scroll)
             ?.setBackgroundColor(currentSkin.keyboardBackground)
         view.findViewById<View>(R.id.skin_picker_panel)
+            ?.setBackgroundColor(currentSkin.keyboardBackground)
+        view.findViewById<View>(R.id.character_type_panel)
             ?.setBackgroundColor(currentSkin.keyboardBackground)
 
         styleButtonsRecursively(view as ViewGroup)
@@ -625,7 +747,7 @@ class SeigoIME : InputMethodService() {
                 currentSkin.keyShadow,
                 currentSkin.textColor
             )
-            "special", "mode", "skin_option" -> styleKey(
+            "special", "mode", "skin_option", "char_option" -> styleKey(
                 button,
                 currentSkin.specialKeyColor,
                 currentSkin.keyShadow,
@@ -649,7 +771,11 @@ class SeigoIME : InputMethodService() {
         )
         styleModeButton(
             view.findViewById<Button>(R.id.btn_kana_toggle),
-            active = isKatakanaMode
+            active = if (isHangulMode) {
+                kanaDisplayMode != KanaDisplayMode.HIRAGANA
+            } else {
+                useFullWidthSymbols
+            }
         )
         styleModeButton(
             view.findViewById<Button>(R.id.btn_shift),
@@ -664,6 +790,7 @@ class SeigoIME : InputMethodService() {
             active = view.findViewById<View>(R.id.skin_picker_panel)
                 ?.visibility == View.VISIBLE
         )
+        updateCharacterTypeOptionStates()
     }
 
     private fun updateSkinOptionStates() {

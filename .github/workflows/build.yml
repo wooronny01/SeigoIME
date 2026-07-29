@@ -122,10 +122,10 @@ jobs:
           mkdir -p artifacts
           DEBUG_APK="$(find app/build/outputs/apk/debug -type f -name '*.apk' | head -n 1)"
           test -n "$DEBUG_APK"
-          cp "$DEBUG_APK" artifacts/SeigoIME-v1.1-debug.apk
-          unzip -l artifacts/SeigoIME-v1.1-debug.apk | grep -q 'assets/kanji_data.csv'
+          cp "$DEBUG_APK" artifacts/SeigoIME-v1.2-debug.apk
+          unzip -l artifacts/SeigoIME-v1.2-debug.apk | grep -q 'assets/kanji_data.csv'
           echo "일본어 사전이 APK 안에 포함되어 있습니다."
-          sha256sum artifacts/SeigoIME-v1.1-debug.apk | tee artifacts/SHA256SUMS.txt
+          sha256sum artifacts/SeigoIME-v1.2-debug.apk | tee artifacts/SHA256SUMS.txt
           ls -lh artifacts
 
       - name: 8. Release 서명정보 준비
@@ -164,12 +164,12 @@ jobs:
           gradle --no-daemon assembleRelease --stacktrace
           RELEASE_APK="$(find app/build/outputs/apk/release -type f -name '*.apk' | head -n 1)"
           test -n "$RELEASE_APK"
-          cp "$RELEASE_APK" artifacts/SeigoIME-v1.1-release.apk
+          cp "$RELEASE_APK" artifacts/SeigoIME-v1.2-release.apk
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify \
             --verbose \
             --print-certs \
-            artifacts/SeigoIME-v1.1-release.apk
-          sha256sum artifacts/SeigoIME-v1.1-release.apk >> artifacts/SHA256SUMS.txt
+            artifacts/SeigoIME-v1.2-release.apk
+          sha256sum artifacts/SeigoIME-v1.2-release.apk >> artifacts/SHA256SUMS.txt
 
       - name: 10. APK 다운로드 파일로 올리기
         uses: actions/upload-artifact@v5
@@ -193,7 +193,7 @@ jobs:
   emulator_install_test:
     name: Android 14 실제 설치 확인
     needs: build
-    if: github.event_name == 'workflow_dispatch' && inputs.run_install_test
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.run_install_test)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
