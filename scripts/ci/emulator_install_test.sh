@@ -76,7 +76,9 @@ else
 fi
 
 if [ -n "$AAPT2" ] && [ -x "$AAPT2" ]; then
-  "$AAPT2" dump xmltree "$APK" AndroidManifest.xml \
+  "$AAPT2" dump xmltree \
+    --file AndroidManifest.xml \
+    "$APK" \
     > emulator-results/apk-manifest.txt
   grep -nE \
     'SeigoIME|android.view.InputMethod|BIND_INPUT_METHOD|android.view.im' \
